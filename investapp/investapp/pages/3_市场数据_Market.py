@@ -9,12 +9,12 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 
 from investlib_data.market_api import MarketDataFetcher
 from investlib_data.symbol_validator import validate_symbol, get_symbol_info
-from investapp.investapp.components.chart_renderer import render_kline_chart
-from investapp.investapp.components.data_freshness import render_freshness_indicator
-from investapp.investapp.utils.symbol_selector import render_symbol_selector_compact
+from investapp.components.chart_renderer import render_kline_chart
+from investapp.components.data_freshness import render_freshness_indicator
+from investapp.utils.symbol_selector import render_symbol_selector_compact
 import pandas as pd
 
-st.set_page_config(page_title="市场数据", page_icon="📈", layout="wide")
+st.set_page_config(page_title="市场数据 Market", page_icon="📈", layout="wide")
 
 st.title("📈 市场数据查询")
 

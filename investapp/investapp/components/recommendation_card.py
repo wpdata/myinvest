@@ -85,8 +85,8 @@ def render_recommendation_card(recommendation: Dict[str, Any]) -> None:
         # Action button with confirmation dialog
         if st.button(f"确认执行 - {symbol}", key=f"execute_{symbol}", type="primary"):
             # Import here to avoid circular dependency
-            from investapp.investapp.components.confirmation_dialog import show_confirmation_dialog
-            from investapp.investapp.components.position_validator import PositionValidator
+            from investapp.components.confirmation_dialog import show_confirmation_dialog
+            from investapp.components.position_validator import PositionValidator
             from investlib_data.operation_logger import OperationLogger
             from sqlalchemy import create_engine
             from sqlalchemy.orm import sessionmaker

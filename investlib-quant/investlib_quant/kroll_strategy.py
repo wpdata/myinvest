@@ -1,13 +1,16 @@
-"""Kroll Risk-Focused Strategy Implementation (T031).
+"""Kroll风险控制策略 - 60日均线+RSI+波动率管理。
 
-Implements a conservative, risk-first strategy with the following rules:
-- BUY signal: Price > MA60 + Volume > 1.5x average + RSI < 70 (not overbought)
-- Stop-loss: Entry * 0.975 (-2.5%, tighter than Livermore)
-- Take-profit: Entry * 1.05 (+5%, conservative)
-- Position sizing: Max 12% per position (reduce to 8% if ATR > 3% = high volatility)
-- Confidence: HIGH if RSI < 60, MEDIUM if 60 ≤ RSI < 70
+这是一个保守的、风险优先的策略，强调资金安全和风险控制。
+策略名称来源于风险管理专家Stanley Kroll的投资理念。
 
-V0.2: Uses real market data via MarketDataFetcher
+核心特点：
+- 更短的均线周期（60日 vs 120日），反应更灵敏
+- RSI过滤避免追高（RSI < 70）
+- 动态仓位管理（根据波动率调整）
+- 更紧的止损（2.5% vs 3.5%）
+- 更保守的止盈（5% vs 7%）
+
+V0.2: 使用真实市场数据通过MarketDataFetcher
 """
 
 import pandas as pd
@@ -407,3 +410,107 @@ class KrollStrategy:
             if session:
                 session.close()
                 self.logger.debug("[KrollStrategy] Database session closed")
+
+
+# 注册策略到策略中心
+def register_strategy():
+    """注册Kroll策略到策略注册中心。"""
+    try:
+        # 延迟导入，避免循环依赖
+        import sys
+        import os
+        # 添加 src 目录到路径
+        src_path = os.path.join(os.path.dirname(__file__), '../src')
+        if src_path not in sys.path:
+            sys.path.insert(0, src_path)
+
+        from investlib_quant.strategies.registry import StrategyRegistry, StrategyInfo
+
+        strategy_info = StrategyInfo(
+            name="ma60_rsi_volatility",
+            display_name="Kroll风险控制策略",
+            description="60日均线+RSI过滤+动态仓位管理，强调风险控制和资金安全的保守型策略",
+
+            logic="价格突破MA60 + 成交量>1.5倍 + RSI<70 → 买入。根据ATR动态调整仓位（高波动降低仓位）",
+
+            parameters={
+                "ma_period": {
+                    "default": 60,
+                    "description": "均线周期（日），比Livermore更短，反应更灵敏"
+                },
+                "volume_threshold": {
+                    "default": 1.5,
+                    "description": "成交量放大倍数，要求更高"
+                },
+                "rsi_period": {
+                    "default": 14,
+                    "description": "RSI计算周期"
+                },
+                "rsi_overbought": {
+                    "default": 70,
+                    "description": "RSI超买阈值，避免追高"
+                },
+                "stop_loss_pct": {
+                    "default": 2.5,
+                    "description": "止损百分比，更紧的保护"
+                },
+                "take_profit_pct": {
+                    "default": 5.0,
+                    "description": "止盈百分比，更保守的目标"
+                },
+                "base_position_pct": {
+                    "default": 12.0,
+                    "description": "基础仓位百分比"
+                },
+                "reduced_position_pct": {
+                    "default": 8.0,
+                    "description": "高波动时降低的仓位"
+                },
+                "high_volatility_threshold": {
+                    "default": 3.0,
+                    "description": "高波动阈值（ATR%）"
+                }
+            },
+
+            tags=["风险控制", "均线突破", "RSI过滤", "动态仓位", "保守型"],
+            risk_level="LOW",
+            suitable_for=["震荡市", "风险厌恶投资者", "波动较大的市场"],
+
+            strategy_class=KrollStrategy,
+
+            example_code="""
+from investlib_quant.kroll_strategy import KrollStrategy
+
+# 创建策略实例（使用默认参数）
+strategy = KrollStrategy()
+
+# 分析股票并生成信号
+signal = strategy.analyze(
+    symbol='600519',  # 贵州茅台
+    start_date='2023-01-01',
+    end_date='2024-01-01',
+    capital=100000.0
+)
+
+print(f"策略: {signal['strategy']}")
+print(f"信号: {signal['action']}")
+print(f"置信度: {signal['confidence']}")
+print(f"风险等级: {signal['risk_level']}")
+print(f"仓位大小: {signal['position_size_pct']}%")
+print(f"\\n关键因素:")
+for factor in signal['key_factors']:
+    print(f"  - {factor}")
+""".strip(),
+
+            typical_holding_period="数周",
+            trade_frequency="MEDIUM"
+        )
+
+        StrategyRegistry.register(strategy_info)
+    except ImportError:
+        # 如果注册中心还未创建，静默失败
+        pass
+
+
+# 模块加载时尝试注册
+register_strategy()

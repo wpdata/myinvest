@@ -19,16 +19,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../investlib-d
 from investlib_backtest.engine.backtest_runner import BacktestRunner
 from investlib_backtest.metrics.performance import PerformanceMetrics
 from investlib_backtest.metrics.trade_analysis import TradeAnalysis
-from investlib_quant.livermore_strategy import LivermoreStrategy
-from investlib_quant.kroll_strategy import KrollStrategy
-from investlib_quant.fusion_strategy import FusionStrategy
+from investlib_quant.strategies import StrategyRegistry
 
 # Import symbol selector utility
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from utils.symbol_selector import render_symbol_selector_compact
 
 
-st.set_page_config(page_title="策略回测", layout="wide")
+st.set_page_config(page_title="策略回测 Backtest", page_icon="📉", layout="wide")
 
 st.title("📊 策略回测 - 历史验证")
 
@@ -39,12 +37,17 @@ st.markdown("""
 # Sidebar: Backtest Configuration
 st.sidebar.header("⚙️ 回测配置")
 
+# Get all available strategies from registry
+all_strategies = StrategyRegistry.list_all()
+strategy_options = {s.display_name: s.name for s in all_strategies}
+
 # Strategy selection
-strategy_name = st.sidebar.selectbox(
+strategy_display_name = st.sidebar.selectbox(
     "选择策略",
-    ["Livermore (趋势跟随)", "Kroll (风险聚焦)", "Fusion (多策略融合)"],
-    help="选择要回测的策略"
+    options=list(strategy_options.keys()),
+    help="选择要回测的策略（从策略注册中心获取）"
 )
+strategy_name = strategy_options[strategy_display_name]
 
 # Symbol selection (with smart selector)
 symbol_input = render_symbol_selector_compact(
@@ -116,15 +119,14 @@ if run_backtest:
     if days_diff < 365:
         st.warning(f"⚠️ 日期范围仅有 {days_diff} 天。建议至少 3 年（1095 天）以获得有意义的回测结果。")
 
-    # Initialize strategy
-    st.info(f"正在初始化 {strategy_name} 策略...")
+    # Initialize strategy from registry
+    st.info(f"正在初始化 {strategy_display_name} 策略...")
 
-    if "Livermore" in strategy_name:
-        strategy = LivermoreStrategy()
-    elif "Kroll" in strategy_name:
-        strategy = KrollStrategy()
-    else:  # Fusion
-        strategy = FusionStrategy(livermore_weight=0.6, kroll_weight=0.4)
+    try:
+        strategy = StrategyRegistry.create(strategy_name)
+    except Exception as e:
+        st.error(f"❌ 策略初始化失败: {e}")
+        st.stop()
 
     # Initialize backtest runner
     runner = BacktestRunner(

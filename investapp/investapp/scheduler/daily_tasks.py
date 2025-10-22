@@ -209,7 +209,7 @@ class DailyScheduler:
 
         Args:
             symbol: Stock symbol
-            strategies: List of approved strategy names
+            strategies: List of approved strategy names (old or new format)
 
         Returns:
             List of recommendation dictionaries
@@ -218,28 +218,39 @@ class DailyScheduler:
         import os
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../investlib-quant'))
 
-        from investlib_quant.livermore_strategy import LivermoreStrategy
-        from investlib_quant.kroll_strategy import KrollStrategy
-        from investlib_quant.fusion_strategy import FusionStrategy
+        from investlib_quant.strategies import StrategyRegistry
 
         recommendations = []
 
-        # Map strategy names to classes
-        strategy_map = {
-            'Livermore': LivermoreStrategy,
-            'Kroll': KrollStrategy,
-            'Fusion': FusionStrategy
+        # Map legacy strategy names to new strategy codes
+        legacy_mapping = {
+            'Livermore': 'ma_breakout_120',
+            'Kroll': 'ma60_rsi_volatility',
+            'Fusion': 'fusion_strategy'  # Note: Fusion not yet registered
         }
 
         for strategy_name in strategies:
-            if strategy_name not in strategy_map:
-                self.logger.warning(f"Unknown strategy: {strategy_name}")
-                continue
-
             try:
-                # Initialize strategy
-                strategy_class = strategy_map[strategy_name]
-                strategy = strategy_class()
+                # Try to map legacy names to new codes
+                if strategy_name in legacy_mapping:
+                    strategy_code = legacy_mapping[strategy_name]
+                    self.logger.info(f"Mapping legacy strategy '{strategy_name}' to '{strategy_code}'")
+                else:
+                    strategy_code = strategy_name
+
+                # Try to get strategy from registry
+                try:
+                    strategy = StrategyRegistry.create(strategy_code)
+                    self.logger.info(f"Created strategy from registry: {strategy_code}")
+                except ValueError:
+                    # Fallback for Fusion strategy (not yet registered)
+                    if strategy_name == 'Fusion':
+                        from investlib_quant.fusion_strategy import FusionStrategy
+                        strategy = FusionStrategy()
+                        self.logger.warning("Using legacy Fusion strategy (not in registry)")
+                    else:
+                        self.logger.warning(f"Unknown strategy: {strategy_name}")
+                        continue
 
                 # Generate recommendation
                 result = strategy.analyze(

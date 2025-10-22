@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from investlib_data.models import Base, InvestmentRecord, CurrentHolding, DataSource
-from investapp.investapp.components.dashboard_backend import get_dashboard_data
+from investapp.components.dashboard_backend import get_dashboard_data
 from datetime import date
 
 @pytest.fixture(scope="module")

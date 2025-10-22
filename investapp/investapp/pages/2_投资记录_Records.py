@@ -16,7 +16,7 @@ from datetime import datetime
 import pandas as pd
 import os
 
-st.set_page_config(page_title="投资记录", page_icon="📝", layout="wide")
+st.set_page_config(page_title="投资记录 Records", page_icon="📝", layout="wide")
 
 # Database connection
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/myinvest.db")

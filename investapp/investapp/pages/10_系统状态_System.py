@@ -14,7 +14,7 @@ import os
 # Add library paths
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../investlib-data'))
 
-st.set_page_config(page_title="系统状态", layout="wide")
+st.set_page_config(page_title="系统状态 System", page_icon="🖥️", layout="wide")
 
 st.title("🖥️ 系统状态与监控")
 
@@ -230,34 +230,30 @@ with col2:
 st.divider()
 st.header("🎯 策略状态")
 
-col1, col2, col3 = st.columns(3)
+# 从策略注册中心获取所有策略
+try:
+    from investlib_quant.strategies import StrategyRegistry
+    all_strategies = StrategyRegistry.list_all()
 
-with col1:
-    st.subheader("Livermore 策略")
-    try:
-        from investlib_quant.livermore_strategy import LivermoreStrategy
-        strategy = LivermoreStrategy()
-        st.success("✅ 加载成功")
-    except Exception as e:
-        st.error(f"❌ 错误: {str(e)[:50]}")
+    # 动态创建列
+    if len(all_strategies) > 0:
+        cols = st.columns(min(len(all_strategies), 3))
 
-with col2:
-    st.subheader("Kroll 策略")
-    try:
-        from investlib_quant.kroll_strategy import KrollStrategy
-        strategy = KrollStrategy()
-        st.success("✅ 加载成功")
-    except Exception as e:
-        st.error(f"❌ 错误: {str(e)[:50]}")
+        for idx, strategy_info in enumerate(all_strategies[:3]):
+            with cols[idx]:
+                st.subheader(strategy_info.display_name)
+                try:
+                    strategy = StrategyRegistry.create(strategy_info.name)
+                    st.success("✅ 加载成功")
+                    st.caption(f"代码: {strategy_info.name}")
+                    st.caption(f"风险: {strategy_info.risk_level}")
+                except Exception as e:
+                    st.error(f"❌ 错误: {str(e)[:50]}")
+    else:
+        st.warning("未找到已注册的策略")
 
-with col3:
-    st.subheader("融合策略")
-    try:
-        from investlib_quant.fusion_strategy import FusionStrategy
-        strategy = FusionStrategy()
-        st.success("✅ 加载成功")
-    except Exception as e:
-        st.error(f"❌ 错误: {str(e)[:50]}")
+except Exception as e:
+    st.error(f"❌ 策略注册中心错误: {str(e)}")
 
 # === Section 5: Recent Activity ===
 st.divider()

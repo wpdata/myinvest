@@ -11,7 +11,7 @@ from investlib_data.operation_logger import OperationLogger
 import pandas as pd
 import json
 
-st.set_page_config(page_title="操作日志", page_icon="📋", layout="wide")
+st.set_page_config(page_title="操作日志 Logs", page_icon="📋", layout="wide")
 
 # Database
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/myinvest.db")

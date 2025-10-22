@@ -15,7 +15,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 from investapp.scheduler.daily_tasks import DailyScheduler
 
-st.set_page_config(page_title="调度器日志", layout="wide")
+st.set_page_config(page_title="调度器日志 Scheduler", page_icon="📅", layout="wide")
 
 st.title("📅 自动调度器日志")
 

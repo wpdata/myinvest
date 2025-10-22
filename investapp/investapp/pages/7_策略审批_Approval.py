@@ -10,7 +10,7 @@ import pandas as pd
 from datetime import datetime
 import os
 
-st.set_page_config(page_title="策略审批", layout="wide")
+st.set_page_config(page_title="策略审批 Approval", page_icon="✅", layout="wide")
 
 st.title("✅ 策略审批工作流")
 

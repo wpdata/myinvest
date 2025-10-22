@@ -12,13 +12,13 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from investapp.investapp.components.dashboard_backend import get_dashboard_data
-from investapp.investapp.components.chart_renderer import render_profit_loss_curve, render_asset_distribution
-from investapp.investapp.components.recommendation_card import render_recommendation_list
-from investapp.investapp.components.fusion_card import render_fusion_card
+from investapp.components.dashboard_backend import get_dashboard_data
+from investapp.components.chart_renderer import render_profit_loss_curve, render_asset_distribution
+from investapp.components.recommendation_card import render_recommendation_list
+from investapp.components.fusion_card import render_fusion_card
 import os
 
-st.set_page_config(page_title="仪表盘", page_icon="📊", layout="wide")
+st.set_page_config(page_title="仪表盘 Dashboard", page_icon="📊", layout="wide")
 
 # Database connection
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/myinvest.db")
@@ -170,7 +170,7 @@ watchlist = get_watchlist_symbols()
 
 # Tabs for different strategies
 tab_fusion, tab_livermore, tab_kroll, tab_history = st.tabs(
-    ["🎯 融合推荐", "📈 Livermore", "🛡️ Kroll", "📜 历史记录"]
+    ["🎯 融合推荐", "📈 120日均线突破策略", "🛡️ Kroll风险控制策略", "📜 历史记录"]
 )
 
 with tab_fusion:
@@ -189,6 +189,8 @@ with tab_fusion:
                 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../investlib-quant'))
                 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../investlib-data'))
 
+                # 注意：Fusion策略尚未迁移到策略注册中心，暂时保持原有导入方式
+                # TODO: 将Fusion策略添加到策略注册中心后，使用 StrategyRegistry.create('fusion_strategy')
                 from investlib_quant.fusion_strategy import FusionStrategy
 
                 # Generate fusion recommendation (analyze method fetches data internally)
@@ -216,22 +218,23 @@ with tab_fusion:
 
 with tab_livermore:
     st.markdown("""
-    **Livermore 策略**：经典趋势跟随策略，基于价格动量和市场趋势。
+    **120日均线突破策略**：经典趋势跟随策略，捕捉中长期趋势。
     - 120日均线趋势判断
-    - 突破信号识别
-    - 动态止损止盈
+    - 突破信号识别+成交量确认
+    - 动态止损止盈（-3.5% / +7%）
     """)
 
     selected_symbol_liv = st.selectbox("选择股票", watchlist, key="liv_symbol_select")
 
-    if st.button("📈 生成 Livermore 推荐", key="gen_liv"):
+    if st.button("📈 生成推荐 (120日均线突破策略)", key="gen_liv"):
         with st.spinner(f"正在为 {selected_symbol_liv} 生成推荐..."):
             try:
                 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../investlib-quant'))
 
-                from investlib_quant.livermore_strategy import LivermoreStrategy
+                # 使用策略注册中心获取策略
+                from investlib_quant.strategies import StrategyRegistry
 
-                strategy = LivermoreStrategy()
+                strategy = StrategyRegistry.create('ma_breakout_120')
                 recommendation = strategy.analyze(selected_symbol_liv)
 
                 st.session_state['liv_rec'] = recommendation
@@ -268,23 +271,24 @@ with tab_livermore:
 
 with tab_kroll:
     st.markdown("""
-    **Kroll 策略**：风险优先的稳健策略，注重资金保护。
-    - RSI 超买超卖判断
-    - ATR 波动率调整
+    **Kroll风险控制策略**：风险优先的稳健策略，注重资金保护。
+    - 60日均线+RSI超买超卖判断
+    - ATR波动率动态调整仓位
     - 严格止损 (2.5%)
-    - 高波动降低仓位
+    - 高波动降低仓位（12% → 8%）
     """)
 
     selected_symbol_kroll = st.selectbox("选择股票", watchlist, key="kroll_symbol_select")
 
-    if st.button("🛡️ 生成 Kroll 推荐", key="gen_kroll"):
+    if st.button("🛡️ 生成推荐 (Kroll风险控制策略)", key="gen_kroll"):
         with st.spinner(f"正在为 {selected_symbol_kroll} 生成推荐..."):
             try:
                 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../investlib-quant'))
 
-                from investlib_quant.kroll_strategy import KrollStrategy
+                # 使用策略注册中心获取策略
+                from investlib_quant.strategies import StrategyRegistry
 
-                strategy = KrollStrategy()
+                strategy = StrategyRegistry.create('ma60_rsi_volatility')
                 recommendation = strategy.analyze(selected_symbol_kroll)
 
                 st.session_state['kroll_rec'] = recommendation

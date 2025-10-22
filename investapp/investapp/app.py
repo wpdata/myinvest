@@ -30,5 +30,17 @@ st.markdown(
 
 st.markdown("--- ")
 st.markdown("请从左侧的侧边栏中选择一个页面开始：")
-st.markdown("- **仪表盘**: 查看您的投资组合概览和 AI 建议。")
-st.markdown("- **投资记录管理**: 导入或手动管理您的交易历史。")
+
+st.markdown("### 📊 核心功能")
+st.markdown("- **仪表盘**: 查看您的投资组合概览和 AI 建议")
+st.markdown("- **投资记录管理**: 导入或手动管理您的交易历史")
+st.markdown("- **市场数据**: 实时查询股票和ETF数据")
+st.markdown("- **回测工具**: 测试策略的历史表现")
+
+st.markdown("### 🎯 新功能 (v0.2)")
+st.markdown("- **策略管理** ⭐: 查看和管理所有投资策略")
+st.markdown("- **市场轮动策略** ⭐: 大盘恐慌时自动切换资产")
+
+st.markdown("### 📚 帮助文档")
+st.markdown("- 查看 `investapp/NEW_FEATURES.md` 了解新功能")
+st.markdown("- 查看 `STRATEGY_GUIDE.md` 了解策略详情")
