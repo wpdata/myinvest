@@ -1,0 +1,15 @@
+# MyInvest v0.1 - Main Dependencies
+streamlit>=1.28.0
+efinance>=0.5.3
+akshare>=1.11.0
+plotly>=5.17.0
+sqlalchemy>=2.0.0
+click>=8.1.0
+pytest>=7.4.0
+pytest-cov>=4.1.0
+python-dotenv>=1.0.0
+
+# MyInvest v0.2 - Additional Dependencies
+apscheduler>=3.10.0  # For automated daily scheduler
+pandas_ta>=0.3.14b   # For technical indicators (RSI, ATR, MA)
+redis>=5.0.0         # For caching with 7-day retention
