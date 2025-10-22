@@ -86,3 +86,7 @@ debug_reports/
 # Test data
 test.csv
 *.csv
+
+# AI tool configurations
+.gemini/
+.cursor/
