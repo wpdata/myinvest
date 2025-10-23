@@ -7,12 +7,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Database
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/myinvest.db")
+# 使用绝对路径确保无论从哪个目录启动都能找到正确的数据库
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////Users/pw/ai/myinvest/data/myinvest.db")
 
 # Market Data APIs
 # Note: Efinance is now the primary data source (free, no token required)
 # AKShare is used as fallback
-CACHE_DIR = os.getenv("CACHE_DIR", "data/cache")
+CACHE_DIR = os.getenv("CACHE_DIR", "/Users/pw/ai/myinvest/data/cache")
 
 # Application Settings
 MAX_POSITION_SIZE_PCT = 20  # Maximum position size as % of capital

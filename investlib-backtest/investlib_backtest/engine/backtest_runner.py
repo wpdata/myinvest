@@ -1,4 +1,6 @@
-"""Backtest engine for strategy validation (T066).
+"""Backtest engine for strategy validation (T066, T014).
+
+V0.3 Enhancement (T014): Added run_single_stock() for parallel execution.
 
 Runs strategies on historical market data (3+ years) to validate performance.
 Uses real Tushare/AKShare data with transaction cost simulation.
@@ -48,9 +50,10 @@ class BacktestRunner:
         Returns:
             (is_valid, error_message)
         """
-        # Check minimum rows
-        if len(data) < 250:  # ~1 year minimum
-            return False, f"数据不足: {len(data)} 天（至少需要 250 天）"
+        # Check minimum rows (reduced from 250 to 150 to support shorter backtest periods)
+        # Note: Strategy still needs 120 days for indicators, so 150 gives 30 days of actual backtesting
+        if len(data) < 150:  # ~6 months minimum
+            return False, f"数据不足: {len(data)} 天（至少需要 150 天，建议 250+ 天以获得更准确结果）"
 
         # Check required columns
         required_cols = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
@@ -144,7 +147,7 @@ class BacktestRunner:
             data_sources: Dict[str, str] = {}
 
             for symbol in symbols:
-                self.logger.info(f"Fetching historical data for {symbol}...")
+                self.logger.info(f"Fetching historical data for {symbol} from {start_date} to {end_date}...")
                 try:
                     # CRITICAL: Use prefer_cache=True to avoid API rate limits during backtesting
                     # This will try cache first, only calling APIs if cache misses
@@ -157,10 +160,26 @@ class BacktestRunner:
                     market_data = result['data']
                     data_sources[symbol] = result['metadata']['api_source']
 
+                    # Log actual data received
+                    self.logger.info(
+                        f"📊 Retrieved {len(market_data)} rows for {symbol} "
+                        f"(requested: {start_date} to {end_date})"
+                    )
+                    if len(market_data) > 0 and 'timestamp' in market_data.columns:
+                        actual_start = market_data['timestamp'].min()
+                        actual_end = market_data['timestamp'].max()
+                        self.logger.info(f"   Actual date range: {actual_start} to {actual_end}")
+
                     # Validate data
                     is_valid, error_msg = self.validate_data(market_data, symbol)
                     if not is_valid:
-                        raise ValueError(f"Data validation failed for {symbol}: {error_msg}")
+                        # Enhanced error message with date range info
+                        raise ValueError(
+                            f"Data validation failed for {symbol}: {error_msg}\n"
+                            f"  Requested: {start_date} to {end_date}\n"
+                            f"  Received: {len(market_data)} rows\n"
+                            f"  Source: {data_sources[symbol]}"
+                        )
 
                     all_data[symbol] = market_data
                     self.logger.info(
@@ -300,6 +319,168 @@ class BacktestRunner:
             if session:
                 session.close()
                 self.logger.debug("[BacktestRunner] Database session closed")
+
+    def run_single_stock(
+        self,
+        symbol: str,
+        data: pd.DataFrame,
+        start_date: str,
+        end_date: str,
+        strategy,
+        capital: Optional[float] = None,
+        strategy_params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Run backtest for a single stock with pre-fetched data (T014).
+
+        This method is designed for parallel execution - it accepts pre-fetched
+        market data instead of fetching it internally. No shared state, no API calls.
+
+        Args:
+            symbol: Stock symbol
+            data: Pre-fetched market data DataFrame (OHLCV + timestamp)
+            start_date: Backtest start date (YYYY-MM-DD)
+            end_date: Backtest end date (YYYY-MM-DD)
+            strategy: Strategy instance
+            capital: Initial capital (default: use self.initial_capital)
+            strategy_params: Optional strategy parameters (unused - strategy already initialized)
+
+        Returns:
+            Backtest results dictionary for this symbol
+
+        Raises:
+            ValueError: If data validation fails
+        """
+        capital = capital or self.initial_capital
+
+        self.logger.info(
+            f"[BacktestRunner] Single-stock backtest: {strategy.__class__.__name__} "
+            f"on {symbol} ({len(data)} days)"
+        )
+
+        # Validate data
+        is_valid, error_msg = self.validate_data(data, symbol)
+        if not is_valid:
+            raise ValueError(f"Data validation failed for {symbol}: {error_msg}")
+
+        # Initialize portfolio
+        portfolio = Portfolio(
+            initial_capital=capital,
+            commission_rate=self.commission_rate,
+            slippage_rate=self.slippage_rate
+        )
+
+        # Filter data by date range
+        data = data[
+            (data['timestamp'] >= start_date) &
+            (data['timestamp'] <= end_date)
+        ].copy()
+
+        if data.empty:
+            raise ValueError(
+                f"No data for {symbol} in date range {start_date} to {end_date}"
+            )
+
+        # Get all trading dates
+        all_dates = sorted(data['timestamp'].unique())
+
+        self.logger.debug(
+            f"[BacktestRunner] Single-stock: {symbol} - {len(all_dates)} trading days"
+        )
+
+        # Main backtest loop
+        trades_executed = 0
+        signals_generated = 0
+
+        for i, current_date in enumerate(all_dates):
+            # Get current price
+            day_data = data[data['timestamp'] == current_date]
+            if day_data.empty:
+                continue
+
+            current_price = day_data.iloc[0]['close']
+
+            # Get historical data up to current date
+            historical_data = data[data['timestamp'] <= current_date]
+
+            # Strategy needs enough data for indicators (e.g., MA120)
+            if len(historical_data) < 120:
+                continue
+
+            try:
+                # Generate signal
+                signal = self._generate_signal_from_data(
+                    strategy, symbol, historical_data, capital
+                )
+                signals_generated += 1
+
+                if signal and signal.get('action') in ['BUY', 'STRONG_BUY']:
+                    # Calculate position size
+                    position_size_pct = signal.get('position_size_pct', 10)
+                    position_value = capital * (position_size_pct / 100)
+                    quantity = int(position_value / current_price)
+
+                    if quantity > 0:
+                        success = portfolio.buy(
+                            symbol=symbol,
+                            price=current_price,
+                            quantity=quantity,
+                            timestamp=current_date,
+                            data_source='SharedMemory'
+                        )
+                        if success:
+                            trades_executed += 1
+
+                elif signal and signal.get('action') in ['SELL', 'STRONG_SELL']:
+                    # Sell entire position if we have one
+                    current_position = portfolio.positions.get(symbol, 0)
+                    if current_position > 0:
+                        success = portfolio.sell(
+                            symbol=symbol,
+                            price=current_price,
+                            quantity=current_position,
+                            timestamp=current_date,
+                            data_source='SharedMemory'
+                        )
+                        if success:
+                            trades_executed += 1
+
+            except Exception as e:
+                self.logger.warning(
+                    f"Signal generation failed for {symbol} on {current_date}: {e}"
+                )
+
+            # Record daily portfolio value
+            portfolio.record_daily_value(current_date, {symbol: current_price})
+
+        # Get final price
+        final_price = data.iloc[-1]['close']
+
+        # Get portfolio summary
+        summary = portfolio.get_summary({symbol: final_price})
+
+        self.logger.info(
+            f"[BacktestRunner] Single-stock complete ({symbol}): "
+            f"Final value: {summary['final_value']:.2f} | "
+            f"Return: {summary['total_return']*100:.2f}% | "
+            f"Trades: {trades_executed}"
+        )
+
+        # Return results
+        return {
+            'strategy_name': strategy.__class__.__name__,
+            'symbol': symbol,
+            'start_date': start_date,
+            'end_date': end_date,
+            'initial_capital': capital,
+            'final_capital': summary['final_value'],
+            'total_return': summary['total_return'],
+            'total_trades': trades_executed,
+            'signals_generated': signals_generated,
+            'trade_log': portfolio.get_trade_log(),
+            'equity_curve': portfolio.get_equity_curve(),
+            'data_source': 'SharedMemory',
+            'backtest_completed_at': datetime.now().isoformat()
+        }
 
     def _generate_signal_from_data(
         self,

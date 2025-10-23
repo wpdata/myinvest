@@ -24,8 +24,9 @@ st.markdown("""
 调度器在每个交易日的 **北京时间 08:30** 运行。
 """)
 
-# Database connection
-DB_PATH = "/Users/pw/ai/myinvest/data/myinvest.db"
+# Database connection - use environment variable or default
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////Users/pw/ai/myinvest/data/myinvest.db")
+DB_PATH = DATABASE_URL.replace("sqlite:///", "")
 
 def get_scheduler_logs(days: int = 30, status_filter: str = None):
     """获取调度器执行日志。"""

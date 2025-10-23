@@ -104,6 +104,10 @@ class InvestmentRecord(Base):
     sale_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     profit_loss: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
+    # Multi-asset support (v0.3)
+    direction: Mapped[str] = mapped_column(String(10), nullable=False, default="long", server_default="long")
+    margin_used: Mapped[float] = mapped_column(Float, nullable=False, default=0.0, server_default="0.0")
+
     # Data integrity (Constitution Principle VII)
     data_source: Mapped[DataSource] = mapped_column(Enum(DataSource), nullable=False)
     ingestion_timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
@@ -307,6 +311,10 @@ class CurrentHolding(Base):
         onupdate=datetime.utcnow,
         nullable=False
     )
+
+    # Multi-asset support (v0.3)
+    direction: Mapped[str] = mapped_column(String(10), nullable=False, default="long", server_default="long")
+    margin_used: Mapped[float] = mapped_column(Float, nullable=False, default=0.0, server_default="0.0")
 
     # Audit
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)

@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_system"
+
+[project]
+name = "investlib-export"
+version = "0.3.0"
+description = "MyInvest V0.3 - Report export in PDF/Excel/Word formats with Chinese support"
+authors = [
+    {name = "MyInvest Team"}
+]
+requires-python = ">=3.10"
+dependencies = [
+    "reportlab>=3.6.0",
+    "openpyxl>=3.1.0",
+    "python-docx>=0.8.11",
+    "matplotlib>=3.7.0",
+    "pandas>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["investlib_export*"]

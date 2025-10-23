@@ -21,8 +21,8 @@ import os
 st.set_page_config(page_title="仪表盘 Dashboard", page_icon="📊", layout="wide")
 
 # Database connection
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/myinvest.db")
-DB_PATH = "/Users/pw/ai/myinvest/data/myinvest.db"
+# 使用绝对路径确保无论从哪个目录启动都能找到正确的数据库
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////Users/pw/ai/myinvest/data/myinvest.db")
 engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 
@@ -361,7 +361,9 @@ with tab_history:
         )
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        # Extract DB path from DATABASE_URL (format: sqlite:////path/to/db)
+        db_path = DATABASE_URL.replace("sqlite:///", "")
+        conn = sqlite3.connect(db_path)
 
         # Build query with filters
         query = """

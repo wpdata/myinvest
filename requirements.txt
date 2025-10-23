@@ -13,3 +13,30 @@ python-dotenv>=1.0.0
 apscheduler>=3.10.0  # For automated daily scheduler
 pandas_ta>=0.3.14b   # For technical indicators (RSI, ATR, MA)
 redis>=5.0.0         # For caching with 7-day retention
+
+# MyInvest v0.3 - Production-Ready Enhancement Dependencies
+# UI Framework Enhancements
+streamlit-autorefresh>=0.0.1  # Real-time dashboard updates (5-second refresh)
+streamlit-gettext>=0.0.4      # Chinese localization support
+mplfinance>=0.12.10b0         # Advanced financial charts
+
+# Database Migrations
+alembic>=1.12.0               # Schema migration framework
+pytest-alembic                # Migration testing
+
+# Configuration Management
+pydantic>=2.0.0               # Type-safe data validation
+pydantic-settings>=2.0.0      # Type-safe centralized configuration with BaseSettings
+
+# Report Generation
+reportlab>=3.6.0              # PDF report generation with Chinese fonts
+openpyxl>=3.1.0               # Excel report generation with conditional formatting
+python-docx>=0.8.11           # Word report generation
+matplotlib>=3.7.0             # Chart embedding in reports
+
+# Options Greeks Calculation
+py_vollib_vectorized>=0.1.0   # High-performance Black-Scholes calculations
+
+# Risk Metrics & Performance
+scipy>=1.11.0                 # Risk metrics (VaR, CVaR, correlation)
+psutil                        # Memory monitoring for parallel processing

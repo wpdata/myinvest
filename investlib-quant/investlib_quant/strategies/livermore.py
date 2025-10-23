@@ -7,6 +7,8 @@
 from typing import Dict, Optional
 import pandas as pd
 import numpy as np
+import logging
+from datetime import datetime, timedelta
 from .base import BaseStrategy
 
 
@@ -46,7 +48,8 @@ class LivermoreStrategy(BaseStrategy):
         ma_period: int = 120,
         volume_threshold: float = 1.3,
         stop_loss_pct: float = 3.5,
-        take_profit_pct: float = 7.0
+        take_profit_pct: float = 7.0,
+        position_size_pct: float = 15.0
     ):
         """初始化 Livermore 策略。"""
         super().__init__(name="Livermore Trend Following")
@@ -54,6 +57,8 @@ class LivermoreStrategy(BaseStrategy):
         self.volume_threshold = volume_threshold
         self.stop_loss_pct = stop_loss_pct
         self.take_profit_pct = take_profit_pct
+        self.position_size_pct = position_size_pct
+        self.logger = logging.getLogger(__name__)
 
     def generate_signal(self, market_data: pd.DataFrame) -> Optional[Dict]:
         """生成交易信号。
@@ -112,7 +117,7 @@ class LivermoreStrategy(BaseStrategy):
                 "entry_price": round(current_price, 2),
                 "stop_loss": round(stop_loss, 2),
                 "take_profit": round(take_profit, 2),
-                "position_size_pct": 15,  # 默认建议 15% 仓位
+                "position_size_pct": self.position_size_pct,  # 使用配置的仓位
                 "confidence": confidence,
                 "reasoning": {
                     "strategy": "Livermore Trend Following",
@@ -143,6 +148,133 @@ class LivermoreStrategy(BaseStrategy):
         df = market_data[market_data['timestamp'] <= entry_date].copy()
         return self.generate_signal(df)
 
+    def analyze(
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        capital: float = 100000.0,
+        use_cache: bool = True
+    ) -> Dict:
+        """分析市场数据并生成交易信号（使用真实市场数据）。
+
+        Args:
+            symbol: 股票代码（例如 '600519.SH' 或 '600519'）
+            start_date: 开始日期 YYYY-MM-DD 格式（默认：自动计算）
+            end_date: 结束日期 YYYY-MM-DD 格式（默认：今天）
+            capital: 可用资金（默认：100000）
+            use_cache: 是否使用缓存数据（默认：True）
+
+        Returns:
+            包含信号、风险指标和数据元信息的完整字典
+
+        Raises:
+            ValueError: 如果数据不足以进行分析
+            NoDataAvailableError: 如果所有数据源都失败
+        """
+        from investlib_data.market_api import MarketDataFetcher, NoDataAvailableError
+        from investlib_data.cache_manager import CacheManager
+        from investlib_data.database import SessionLocal
+
+        # 设置默认日期范围（需要足够数据计算 MA120）
+        if not end_date:
+            end_date = datetime.now().strftime('%Y-%m-%d')
+        if not start_date:
+            # 需要约 1.5 倍交易日用于 MA120 + 缓冲
+            days_needed = int(self.ma_period * 1.5 + 30)  # 120 * 1.5 + 30 = 210 天
+            start_date = (datetime.now() - timedelta(days=days_needed)).strftime('%Y-%m-%d')
+
+        # 获取真实数据
+        cache_manager = None
+        session = None
+        if use_cache:
+            try:
+                session = SessionLocal()
+                cache_manager = CacheManager(session=session)
+            except Exception as e:
+                self.logger.warning(f"缓存不可用: {e}")
+
+        fetcher = MarketDataFetcher(cache_manager=cache_manager)
+
+        self.logger.info(f"[LivermoreStrategy] 获取 {symbol} 从 {start_date} 到 {end_date} 的数据")
+
+        try:
+            try:
+                result = fetcher.fetch_with_fallback(symbol, start_date, end_date)
+            except NoDataAvailableError as e:
+                self.logger.error(f"[LivermoreStrategy] 获取 {symbol} 数据失败: {e}")
+                raise
+
+            market_data = result['data']
+            metadata = result['metadata']
+
+            # 记录数据来源
+            self.logger.info(
+                f"[LivermoreStrategy] 正在分析 {symbol}，数据来自 {metadata['api_source']}，"
+                f"获取时间 {metadata['retrieval_timestamp']}，数据新鲜度={metadata['data_freshness']}"
+            )
+
+            # 生成信号
+            signal = self.generate_signal(market_data)
+
+            # 如果没有信号或是 HOLD，返回基本信息
+            if not signal or signal.get('action') == 'HOLD':
+                return {
+                    'symbol': symbol,
+                    'strategy': 'Livermore Trend Following',
+                    'action': 'HOLD',
+                    'confidence': 'N/A',
+                    'key_factors': ['当前无明确信号'],
+                    'entry_price': 0,
+                    'stop_loss': 0,
+                    'take_profit': 0,
+                    'position_size_pct': 0,
+                    'data_source': metadata['api_source'],
+                    'data_timestamp': metadata['retrieval_timestamp'].isoformat() if isinstance(metadata['retrieval_timestamp'], datetime) else str(metadata['retrieval_timestamp']),
+                    'data_freshness': metadata['data_freshness'],
+                    'data_points': len(market_data),
+                    'analysis_timestamp': datetime.now().isoformat()
+                }
+
+            # 添加额外的元信息到信号
+            reasoning = signal.get('reasoning', {})
+            key_factors = []
+
+            if reasoning.get('ma_breakout'):
+                key_factors.append(f"价格突破120日均线（当前价: ¥{reasoning.get('current_price', 0):.2f}, MA120: ¥{reasoning.get('ma_120', 0):.2f}）")
+
+            if reasoning.get('volume_surge'):
+                key_factors.append(f"成交量放大 {reasoning.get('volume_ratio', 0):.2f} 倍")
+
+            if reasoning.get('risk_reward_ratio'):
+                key_factors.append(f"风险回报比 1:{reasoning.get('risk_reward_ratio', 0):.2f}")
+
+            complete_signal = {
+                'symbol': symbol,
+                'strategy': 'Livermore Trend Following',
+                'action': signal['action'],
+                'confidence': signal['confidence'],
+                'key_factors': key_factors,
+                'entry_price': signal['entry_price'],
+                'stop_loss': signal['stop_loss'],
+                'take_profit': signal['take_profit'],
+                'position_size_pct': signal['position_size_pct'],
+                # 数据元信息
+                'data_source': metadata['api_source'],
+                'data_timestamp': metadata['retrieval_timestamp'].isoformat() if isinstance(metadata['retrieval_timestamp'], datetime) else str(metadata['retrieval_timestamp']),
+                'data_freshness': metadata['data_freshness'],
+                'data_points': len(market_data),
+                'analysis_timestamp': datetime.now().isoformat()
+            }
+
+            return complete_signal
+
+        finally:
+            # 关键：关闭数据库会话以防止连接泄漏
+            if session:
+                session.close()
+                self.logger.debug("[LivermoreStrategy] 数据库会话已关闭")
+
 
 # 注册策略到策略中心
 def register_strategy():
@@ -172,6 +304,10 @@ def register_strategy():
             "take_profit_pct": {
                 "default": 7.0,
                 "description": "止盈百分比"
+            },
+            "position_size_pct": {
+                "default": 15.0,
+                "description": "仓位百分比"
             }
         },
 

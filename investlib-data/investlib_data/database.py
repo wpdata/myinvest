@@ -8,8 +8,8 @@ from investlib_data.models import Base
 import click
 
 
-# Database URL from environment or default SQLite
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/myinvest.db")
+# Database URL from environment or default SQLite with absolute path
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////Users/pw/ai/myinvest/data/myinvest.db")
 
 
 def get_engine(database_url: str = None, echo: bool = False):

@@ -43,6 +43,36 @@ class BaseStrategy(ABC):
         """
         pass
 
+    def analyze_data(
+        self,
+        market_data: pd.DataFrame,
+        symbol: str,
+        capital: float,
+        metadata: Dict
+    ) -> Optional[Dict]:
+        """Analyze market data and generate trading signal (for backtest compatibility).
+
+        This method wraps generate_signal() to provide compatibility with the backtest engine.
+
+        Args:
+            market_data: Market data DataFrame
+            symbol: Symbol being analyzed
+            capital: Available capital
+            metadata: Data metadata (api_source, retrieval_timestamp, etc.)
+
+        Returns:
+            Signal dictionary or None
+        """
+        # Call the strategy's generate_signal method
+        signal = self.generate_signal(market_data)
+
+        # If no signal or HOLD, return None to skip trading
+        if not signal or signal.get('action') == 'HOLD':
+            return None
+
+        # Return signal for BUY/SELL actions
+        return signal
+
     def validate_data(self, df: pd.DataFrame, required_rows: int = 1) -> bool:
         """验证数据完整性。
 

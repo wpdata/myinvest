@@ -1,0 +1,142 @@
+{
+  "app": {
+    "title": "MyInvest - 智能投资分析系统",
+    "version": "版本",
+    "loading": "加载中..."
+  },
+  "watchlist": {
+    "title": "监视列表管理",
+    "symbol_input": "股票代码",
+    "group_selector": "分组",
+    "add_button": "添加",
+    "remove_button": "删除",
+    "edit_button": "编辑",
+    "pause_button": "暂停",
+    "resume_button": "恢复",
+    "create_group": "创建分组",
+    "rename_group": "重命名分组",
+    "delete_group": "删除分组",
+    "csv_upload": "批量导入CSV",
+    "status_active": "活跃",
+    "status_paused": "已暂停",
+    "contract_type": {
+      "stock": "股票",
+      "futures": "期货",
+      "option": "期权"
+    },
+    "column_headers": {
+      "symbol": "代码",
+      "name": "名称",
+      "group": "分组",
+      "type": "类型",
+      "status": "状态",
+      "actions": "操作"
+    },
+    "messages": {
+      "symbol_added": "成功添加股票",
+      "symbol_removed": "成功删除股票",
+      "group_created": "成功创建分组",
+      "invalid_symbol": "代码格式错误",
+      "group_exists": "分组已存在",
+      "confirm_delete": "确认删除？"
+    }
+  },
+  "optimizer": {
+    "title": "参数优化器",
+    "strategy_selector": "选择策略",
+    "symbol_selector": "选择股票",
+    "parameter_ranges": "参数范围",
+    "stop_loss": "止损%",
+    "take_profit": "止盈%",
+    "position_size": "仓位%",
+    "run_button": "开始优化",
+    "apply_button": "应用参数",
+    "optimal_params": "最优参数",
+    "heatmap_title": "参数优化热力图",
+    "sharpe_ratio": "夏普比率",
+    "max_drawdown": "最大回撤",
+    "total_return": "总收益率"
+  },
+  "backtest": {
+    "title": "策略回测",
+    "parallel_backtest": "并行回测",
+    "progress": "进度",
+    "completed": "完成",
+    "export_pdf": "导出PDF",
+    "export_excel": "导出Excel",
+    "export_word": "导出Word",
+    "results": "回测结果",
+    "equity_curve": "权益曲线",
+    "drawdown_chart": "回撤图"
+  },
+  "risk": {
+    "title": "风险监控仪表盘",
+    "var": "风险价值(VaR)",
+    "cvar": "条件风险价值(CVaR)",
+    "margin_usage": "保证金使用率",
+    "safety_buffer": "安全缓冲",
+    "liquidation_warning": "强平警告",
+    "stop_loss_warning": "止损警告",
+    "position_heatmap": "持仓热力图",
+    "correlation_matrix": "相关性矩阵",
+    "greeks": {
+      "total_delta": "总Delta",
+      "total_gamma": "总Gamma",
+      "total_vega": "总Vega",
+      "total_theta": "总Theta",
+      "per_day": "每天"
+    }
+  },
+  "builder": {
+    "title": "组合策略构建器",
+    "template_selector": "选择模板",
+    "leg_builder": "腿构建器",
+    "pnl_chart": "损益图",
+    "backtest_combo": "回测组合",
+    "save_combo": "保存组合",
+    "templates": {
+      "covered_call": "备兑看涨",
+      "butterfly_spread": "蝶式价差",
+      "calendar_spread": "日历价差",
+      "straddle": "跨式组合"
+    }
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确认",
+    "close": "关闭",
+    "refresh": "刷新",
+    "filter": "筛选",
+    "sort": "排序",
+    "search": "搜索",
+    "date": "日期",
+    "time": "时间",
+    "price": "价格",
+    "quantity": "数量",
+    "amount": "金额",
+    "profit": "盈利",
+    "loss": "亏损",
+    "total": "总计",
+    "average": "平均",
+    "percent": "百分比",
+    "yes": "是",
+    "no": "否"
+  },
+  "data_source": {
+    "efinance": "efinance",
+    "akshare": "AkShare",
+    "updated_at": "更新时间",
+    "data_source": "数据源",
+    "realtime": "实时",
+    "delayed": "延迟",
+    "historical": "历史数据"
+  },
+  "errors": {
+    "network_error": "网络错误",
+    "data_fetch_failed": "数据获取失败",
+    "invalid_input": "输入无效",
+    "operation_failed": "操作失败",
+    "permission_denied": "权限不足"
+  }
+}

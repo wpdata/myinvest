@@ -14,7 +14,8 @@ import json
 st.set_page_config(page_title="操作日志 Logs", page_icon="📋", layout="wide")
 
 # Database
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/myinvest.db")
+# 使用绝对路径确保无论从哪个目录启动都能找到正确的数据库
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////Users/pw/ai/myinvest/data/myinvest.db")
 engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 

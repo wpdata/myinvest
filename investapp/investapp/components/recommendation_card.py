@@ -116,7 +116,8 @@ def render_recommendation_card(recommendation: Dict[str, Any]) -> None:
 
                 if result and result['action'] == 'CONFIRM':
                     # Log operation
-                    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///data/myinvest.db")
+                    # 使用绝对路径确保无论从哪个目录启动都能找到正确的数据库
+                    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////Users/pw/ai/myinvest/data/myinvest.db")
                     engine = create_engine(DATABASE_URL)
                     Session = sessionmaker(bind=engine)
                     session = Session()

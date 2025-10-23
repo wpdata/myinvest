@@ -17,6 +17,11 @@ from .livermore import LivermoreStrategy
 from .market_rotation import MarketRotationStrategy
 from .registry import StrategyRegistry, StrategyInfo
 
+# V0.3: Multi-asset strategy base classes
+from .stock_strategy import StockStrategy, SimpleStockStrategy
+from .futures_strategy import FuturesStrategy, SimpleTrendFuturesStrategy
+from .options_strategy import OptionsStrategy, SimpleVolatilityOptionsStrategy
+
 # 尝试导入Kroll策略（在旧位置）
 try:
     import sys
@@ -36,6 +41,13 @@ __all__ = [
     "KrollStrategy",
     "StrategyRegistry",
     "StrategyInfo",
+    # V0.3: Multi-asset strategies
+    "StockStrategy",
+    "FuturesStrategy",
+    "OptionsStrategy",
+    "SimpleStockStrategy",
+    "SimpleTrendFuturesStrategy",
+    "SimpleVolatilityOptionsStrategy",
 ]
 
 # 便捷函数

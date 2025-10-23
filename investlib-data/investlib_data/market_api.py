@@ -26,6 +26,16 @@ class IndexAPIError(Exception):
     pass
 
 
+class FuturesAPIError(Exception):
+    """Futures API error."""
+    pass
+
+
+class OptionsAPIError(Exception):
+    """Options API error."""
+    pass
+
+
 class EfinanceClient:
     """Efinance API client - free, no token required."""
 
@@ -631,6 +641,269 @@ class IndexClient:
                     del os.environ[key]
 
 
+class FuturesClient:
+    """Futures data client using AKShare."""
+
+    def __init__(self):
+        """Initialize Futures client."""
+        import logging
+        import os
+        self.logger = logging.getLogger(__name__)
+
+        # Disable proxy
+        self._original_proxy = {}
+        for key in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'all_proxy']:
+            self._original_proxy[key] = os.environ.get(key)
+            if key in os.environ:
+                del os.environ[key]
+
+        self.logger.info("[FuturesClient] Disabled proxy for API calls")
+
+        try:
+            import akshare as ak
+            self.ak = ak
+            self.version = ak.__version__
+            self.logger.info(f"[FuturesClient] Initialized with AKShare version {self.version}")
+
+            # SSL fix
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            import ssl
+            ssl._create_default_https_context = ssl._create_unverified_context
+            self.logger.info("[FuturesClient] SSL verification disabled")
+
+        except ImportError:
+            raise FuturesAPIError("akshare package not installed")
+
+    def fetch_daily_data(
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        retries: int = 3
+    ) -> pd.DataFrame:
+        """Fetch futures daily data.
+
+        Args:
+            symbol: Futures code (e.g., 'IF2506.CFFEX')
+            start_date: Start date (YYYYMMDD or YYYY-MM-DD)
+            end_date: End date (YYYYMMDD or YYYY-MM-DD)
+            retries: Number of retry attempts
+
+        Returns:
+            DataFrame with OHLCV data
+
+        Raises:
+            FuturesAPIError: If fetch fails after retries
+        """
+        import os
+
+        # Disable proxy before each call
+        saved_proxy = {}
+        for key in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'all_proxy']:
+            saved_proxy[key] = os.environ.get(key)
+            if key in os.environ:
+                del os.environ[key]
+
+        os.environ['NO_PROXY'] = '*'
+        os.environ['no_proxy'] = '*'
+
+        try:
+            # Parse symbol: IF2506.CFFEX -> IF2506
+            clean_symbol = symbol.split('.')[0].upper()
+
+            # Convert date format to YYYYMMDD
+            if start_date and '-' in start_date:
+                start_date = start_date.replace('-', '')
+            if end_date and '-' in end_date:
+                end_date = end_date.replace('-', '')
+
+            if not start_date:
+                start_date = (datetime.now() - timedelta(days=365)).strftime('%Y%m%d')
+            if not end_date:
+                end_date = datetime.now().strftime('%Y%m%d')
+
+            for attempt in range(retries):
+                try:
+                    self.logger.info(f"[FuturesClient] Fetching {symbol} (attempt {attempt + 1}/{retries})")
+
+                    # Fetch futures data using AKShare
+                    # Use futures_zh_daily_sina for daily data
+                    df = self.ak.futures_zh_daily_sina(symbol=clean_symbol)
+
+                    if df is None or df.empty:
+                        raise FuturesAPIError(f"No data returned for {symbol}")
+
+                    # Add metadata
+                    retrieval_timestamp = datetime.utcnow()
+                    df['api_source'] = f"Futures (AKShare v{self.version})"
+                    df['api_version'] = self.version
+                    df['retrieval_timestamp'] = retrieval_timestamp
+                    df['data_freshness'] = 'realtime'
+
+                    # Rename columns to standard format
+                    df = df.rename(columns={
+                        'date': 'timestamp',
+                        'open': 'open',
+                        'high': 'high',
+                        'low': 'low',
+                        'close': 'close',
+                        'volume': 'volume',
+                        'hold': 'open_interest'  # Futures-specific
+                    })
+
+                    self.logger.info(f"[FuturesClient] ✅ Fetched {symbol} from Futures API, rows={len(df)}")
+                    return df
+
+                except Exception as e:
+                    self.logger.warning(f"[FuturesClient] ❌ Attempt {attempt + 1} failed for {symbol}: {e}")
+                    if attempt < retries - 1:
+                        wait_time = 2 ** attempt
+                        self.logger.info(f"[FuturesClient] Retrying in {wait_time}s...")
+                        import time
+                        time.sleep(wait_time)
+                    else:
+                        self.logger.error(f"[FuturesClient] ❌ Failed after {retries} attempts for {symbol}")
+                        raise FuturesAPIError(f"Failed after {retries} attempts: {e}")
+
+            raise FuturesAPIError("Unexpected retry loop exit")
+        finally:
+            # Restore proxy settings
+            for key, value in saved_proxy.items():
+                if value is not None:
+                    os.environ[key] = value
+                elif key in os.environ:
+                    del os.environ[key]
+
+
+class OptionsClient:
+    """Options data client using AKShare."""
+
+    def __init__(self):
+        """Initialize Options client."""
+        import logging
+        import os
+        self.logger = logging.getLogger(__name__)
+
+        # Disable proxy
+        self._original_proxy = {}
+        for key in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'all_proxy']:
+            self._original_proxy[key] = os.environ.get(key)
+            if key in os.environ:
+                del os.environ[key]
+
+        self.logger.info("[OptionsClient] Disabled proxy for API calls")
+
+        try:
+            import akshare as ak
+            self.ak = ak
+            self.version = ak.__version__
+            self.logger.info(f"[OptionsClient] Initialized with AKShare version {self.version}")
+
+            # SSL fix
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            import ssl
+            ssl._create_default_https_context = ssl._create_unverified_context
+            self.logger.info("[OptionsClient] SSL verification disabled")
+
+        except ImportError:
+            raise OptionsAPIError("akshare package not installed")
+
+    def fetch_daily_data(
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        retries: int = 3
+    ) -> pd.DataFrame:
+        """Fetch options daily data.
+
+        Args:
+            symbol: Options code (e.g., '10005102.SH' for 50ETF option)
+            start_date: Start date (YYYYMMDD or YYYY-MM-DD)
+            end_date: End date (YYYYMMDD or YYYY-MM-DD)
+            retries: Number of retry attempts
+
+        Returns:
+            DataFrame with OHLCV data
+
+        Raises:
+            OptionsAPIError: If fetch fails after retries
+        """
+        import os
+
+        # Disable proxy before each call
+        saved_proxy = {}
+        for key in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'all_proxy']:
+            saved_proxy[key] = os.environ.get(key)
+            if key in os.environ:
+                del os.environ[key]
+
+        os.environ['NO_PROXY'] = '*'
+        os.environ['no_proxy'] = '*'
+
+        try:
+            # Parse symbol: 10005102.SH -> 10005102
+            clean_symbol = symbol.split('.')[0]
+
+            # Convert date format to YYYYMMDD
+            if start_date and '-' in start_date:
+                start_date = start_date.replace('-', '')
+            if end_date and '-' in end_date:
+                end_date = end_date.replace('-', '')
+
+            if not start_date:
+                start_date = (datetime.now() - timedelta(days=90)).strftime('%Y%m%d')  # Shorter for options
+            if not end_date:
+                end_date = datetime.now().strftime('%Y%m%d')
+
+            for attempt in range(retries):
+                try:
+                    self.logger.info(f"[OptionsClient] Fetching {symbol} (attempt {attempt + 1}/{retries})")
+
+                    # Fetch options data using AKShare
+                    # Use option_finance_minute_em for options data
+                    df = self.ak.option_finance_board(symbol=clean_symbol)
+
+                    if df is None or df.empty:
+                        raise OptionsAPIError(f"No data returned for {symbol}")
+
+                    # Add metadata
+                    retrieval_timestamp = datetime.utcnow()
+                    df['api_source'] = f"Options (AKShare v{self.version})"
+                    df['api_version'] = self.version
+                    df['retrieval_timestamp'] = retrieval_timestamp
+                    df['data_freshness'] = 'realtime'
+
+                    # Add timestamp column if not present
+                    if 'timestamp' not in df.columns:
+                        df['timestamp'] = datetime.now().strftime('%Y-%m-%d')
+
+                    self.logger.info(f"[OptionsClient] ✅ Fetched {symbol} from Options API, rows={len(df)}")
+                    return df
+
+                except Exception as e:
+                    self.logger.warning(f"[OptionsClient] ❌ Attempt {attempt + 1} failed for {symbol}: {e}")
+                    if attempt < retries - 1:
+                        wait_time = 2 ** attempt
+                        self.logger.info(f"[OptionsClient] Retrying in {wait_time}s...")
+                        import time
+                        time.sleep(wait_time)
+                    else:
+                        self.logger.error(f"[OptionsClient] ❌ Failed after {retries} attempts for {symbol}")
+                        raise OptionsAPIError(f"Failed after {retries} attempts: {e}")
+
+            raise OptionsAPIError("Unexpected retry loop exit")
+        finally:
+            # Restore proxy settings
+            for key, value in saved_proxy.items():
+                if value is not None:
+                    os.environ[key] = value
+                elif key in os.environ:
+                    del os.environ[key]
+
+
 class NoDataAvailableError(Exception):
     """Raised when no data source is available."""
     pass
@@ -652,6 +925,8 @@ class MarketDataFetcher:
         self.akshare = None
         self.etf = None
         self.index = None
+        self.futures = None
+        self.options = None
         self.cache_manager = cache_manager
 
         # Try to initialize Efinance as primary (for stocks)
@@ -678,7 +953,19 @@ class MarketDataFetcher:
         except Exception:
             pass  # Index not available
 
-        if not any([self.efinance, self.akshare, self.etf, self.index, self.cache_manager]):
+        # Try to initialize Futures client
+        try:
+            self.futures = FuturesClient()
+        except Exception:
+            pass  # Futures not available
+
+        # Try to initialize Options client
+        try:
+            self.options = OptionsClient()
+        except Exception:
+            pass  # Options not available
+
+        if not any([self.efinance, self.akshare, self.etf, self.index, self.futures, self.options, self.cache_manager]):
             raise RuntimeError("No market data source available (no API and no cache)")
 
     def _calculate_data_freshness(self, retrieval_timestamp: datetime) -> str:
@@ -728,16 +1015,34 @@ class MarketDataFetcher:
         logger = logging.getLogger(__name__)
 
         # Auto-route based on symbol type
-        from investlib_data.symbol_validator import detect_symbol_type
-        symbol_type = detect_symbol_type(symbol)
+        try:
+            from investlib_data.multi_asset_api import detect_asset_type
+            asset_type = detect_asset_type(symbol)
+        except ImportError:
+            # Fallback to old detection
+            from investlib_data.symbol_validator import detect_symbol_type
+            symbol_type = detect_symbol_type(symbol)
+            # Map old types to new types
+            if symbol_type == 'etf':
+                asset_type = 'etf'
+            elif symbol_type == 'index':
+                asset_type = 'index'
+            else:
+                asset_type = 'stock'
 
-        logger.info(f"[MarketDataFetcher] Symbol {symbol} detected as type: {symbol_type}")
+        logger.info(f"[MarketDataFetcher] Symbol {symbol} detected as type: {asset_type}")
 
-        # Route to appropriate client based on symbol type
-        if symbol_type == 'etf':
+        # Route to appropriate client based on asset type
+        if asset_type == 'futures':
+            # Futures: use FuturesClient
+            return self._fetch_futures_data(symbol, start_date, end_date, prefer_cache, logger)
+        elif asset_type == 'option':
+            # Options: use OptionsClient
+            return self._fetch_options_data(symbol, start_date, end_date, prefer_cache, logger)
+        elif asset_type == 'etf':
             # ETF: use ETFClient only
             return self._fetch_etf_data(symbol, start_date, end_date, prefer_cache, logger)
-        elif symbol_type == 'index':
+        elif asset_type == 'index':
             # Index: use IndexClient only
             return self._fetch_index_data(symbol, start_date, end_date, prefer_cache, logger)
         else:
@@ -1230,3 +1535,243 @@ class MarketDataFetcher:
         # All sources failed for Index
         logger.error(f"[MarketDataFetcher] ❌ ALL SOURCES FAILED for Index {symbol}")
         raise NoDataAvailableError(f"All data sources failed for Index {symbol}")
+
+    def _fetch_futures_data(
+        self,
+        symbol: str,
+        start_date: Optional[str],
+        end_date: Optional[str],
+        prefer_cache: bool,
+        logger
+    ) -> Dict[str, Any]:
+        """Fetch Futures data with FuturesClient → Cache fallback."""
+
+        # Try cache first if prefer_cache=True
+        if prefer_cache and self.cache_manager:
+            try:
+                logger.info(f"[MarketDataFetcher] Attempting Cache first (prefer_cache=True) for Futures {symbol}")
+
+                # Parse dates
+                if start_date:
+                    start_dt = datetime.strptime(start_date.replace('-', ''), '%Y%m%d') if len(start_date) == 8 else datetime.strptime(start_date, '%Y-%m-%d')
+                else:
+                    start_dt = datetime.now() - timedelta(days=365)
+
+                if end_date:
+                    end_dt = datetime.strptime(end_date.replace('-', ''), '%Y%m%d') if len(end_date) == 8 else datetime.strptime(end_date, '%Y-%m-%d')
+                else:
+                    end_dt = datetime.now()
+
+                df = self.cache_manager.get_from_cache(symbol, start_dt, end_dt)
+
+                if not df.empty:
+                    logger.info(f"[MarketDataFetcher] ✅ Cache hit for Futures {symbol}, rows={len(df)}")
+
+                    retrieval_timestamp = df.iloc[0]['retrieval_timestamp'] if 'retrieval_timestamp' in df.columns else datetime.utcnow() - timedelta(hours=1)
+                    if isinstance(retrieval_timestamp, str):
+                        retrieval_timestamp = datetime.fromisoformat(retrieval_timestamp)
+
+                    data_freshness = self._calculate_data_freshness(retrieval_timestamp)
+                    api_source = df.iloc[0]['api_source'] if 'api_source' in df.columns else "Cache (Futures)"
+
+                    return {
+                        'data': df,
+                        'metadata': {
+                            'api_source': f"Cache ({api_source})",
+                            'retrieval_timestamp': retrieval_timestamp,
+                            'data_freshness': data_freshness
+                        }
+                    }
+            except Exception as e:
+                logger.warning(f"[MarketDataFetcher] Cache failed for Futures {symbol}: {e}")
+
+        # Try Level 1: FuturesClient
+        if self.futures:
+            try:
+                logger.info(f"[MarketDataFetcher] Attempting FuturesClient for {symbol}")
+                df = self.futures.fetch_daily_data(symbol, start_date, end_date)
+                retrieval_timestamp = datetime.utcnow()
+                data_freshness = self._calculate_data_freshness(retrieval_timestamp)
+
+                logger.info(f"[MarketDataFetcher] ✅ FuturesClient succeeded for {symbol}, rows={len(df)}")
+
+                # Save to cache
+                if self.cache_manager:
+                    try:
+                        self.cache_manager.save_to_cache(symbol, df, f"AKShare (Futures) v{self.futures.version}", self.futures.version)
+                    except Exception as cache_error:
+                        logger.warning(f"Failed to save Futures data to cache: {cache_error}")
+
+                return {
+                    'data': df,
+                    'metadata': {
+                        'api_source': f"AKShare (Futures) v{self.futures.version}",
+                        'retrieval_timestamp': retrieval_timestamp,
+                        'data_freshness': data_freshness
+                    }
+                }
+            except Exception as e:
+                logger.warning(f"[MarketDataFetcher] ❌ FuturesClient failed for {symbol}: {e}")
+
+        # Try Level 2: Cache as last resort
+        if not prefer_cache and self.cache_manager:
+            try:
+                logger.info(f"[MarketDataFetcher] Attempting Cache as last resort for Futures {symbol}")
+
+                if start_date:
+                    start_dt = datetime.strptime(start_date.replace('-', ''), '%Y%m%d') if len(start_date) == 8 else datetime.strptime(start_date, '%Y-%m-%d')
+                else:
+                    start_dt = datetime.now() - timedelta(days=365)
+
+                if end_date:
+                    end_dt = datetime.strptime(end_date.replace('-', ''), '%Y%m%d') if len(end_date) == 8 else datetime.strptime(end_date, '%Y-%m-%d')
+                else:
+                    end_dt = datetime.now()
+
+                df = self.cache_manager.get_from_cache(symbol, start_dt, end_dt)
+
+                if not df.empty:
+                    logger.info(f"[MarketDataFetcher] ✅ Cache hit for Futures {symbol}, rows={len(df)}")
+                    logger.warning(f"[MarketDataFetcher] ⚠️ Using cached data for Futures {symbol} (API failed)")
+
+                    retrieval_timestamp = df.iloc[0]['retrieval_timestamp'] if 'retrieval_timestamp' in df.columns else datetime.utcnow() - timedelta(hours=1)
+                    if isinstance(retrieval_timestamp, str):
+                        retrieval_timestamp = datetime.fromisoformat(retrieval_timestamp)
+
+                    data_freshness = self._calculate_data_freshness(retrieval_timestamp)
+                    api_source = df.iloc[0]['api_source'] if 'api_source' in df.columns else "Cache (Futures)"
+
+                    return {
+                        'data': df,
+                        'metadata': {
+                            'api_source': f"Cache ({api_source})",
+                            'retrieval_timestamp': retrieval_timestamp,
+                            'data_freshness': data_freshness
+                        }
+                    }
+            except Exception as e:
+                logger.error(f"[MarketDataFetcher] ❌ Cache failed for Futures {symbol}: {e}")
+
+        # All sources failed for Futures
+        logger.error(f"[MarketDataFetcher] ❌ ALL SOURCES FAILED for Futures {symbol}")
+        raise NoDataAvailableError(f"All data sources failed for Futures {symbol}")
+
+    def _fetch_options_data(
+        self,
+        symbol: str,
+        start_date: Optional[str],
+        end_date: Optional[str],
+        prefer_cache: bool,
+        logger
+    ) -> Dict[str, Any]:
+        """Fetch Options data with OptionsClient → Cache fallback."""
+
+        # Try cache first if prefer_cache=True
+        if prefer_cache and self.cache_manager:
+            try:
+                logger.info(f"[MarketDataFetcher] Attempting Cache first (prefer_cache=True) for Options {symbol}")
+
+                # Parse dates
+                if start_date:
+                    start_dt = datetime.strptime(start_date.replace('-', ''), '%Y%m%d') if len(start_date) == 8 else datetime.strptime(start_date, '%Y-%m-%d')
+                else:
+                    start_dt = datetime.now() - timedelta(days=90)  # Shorter for options
+
+                if end_date:
+                    end_dt = datetime.strptime(end_date.replace('-', ''), '%Y%m%d') if len(end_date) == 8 else datetime.strptime(end_date, '%Y-%m-%d')
+                else:
+                    end_dt = datetime.now()
+
+                df = self.cache_manager.get_from_cache(symbol, start_dt, end_dt)
+
+                if not df.empty:
+                    logger.info(f"[MarketDataFetcher] ✅ Cache hit for Options {symbol}, rows={len(df)}")
+
+                    retrieval_timestamp = df.iloc[0]['retrieval_timestamp'] if 'retrieval_timestamp' in df.columns else datetime.utcnow() - timedelta(hours=1)
+                    if isinstance(retrieval_timestamp, str):
+                        retrieval_timestamp = datetime.fromisoformat(retrieval_timestamp)
+
+                    data_freshness = self._calculate_data_freshness(retrieval_timestamp)
+                    api_source = df.iloc[0]['api_source'] if 'api_source' in df.columns else "Cache (Options)"
+
+                    return {
+                        'data': df,
+                        'metadata': {
+                            'api_source': f"Cache ({api_source})",
+                            'retrieval_timestamp': retrieval_timestamp,
+                            'data_freshness': data_freshness
+                        }
+                    }
+            except Exception as e:
+                logger.warning(f"[MarketDataFetcher] Cache failed for Options {symbol}: {e}")
+
+        # Try Level 1: OptionsClient
+        if self.options:
+            try:
+                logger.info(f"[MarketDataFetcher] Attempting OptionsClient for {symbol}")
+                df = self.options.fetch_daily_data(symbol, start_date, end_date)
+                retrieval_timestamp = datetime.utcnow()
+                data_freshness = self._calculate_data_freshness(retrieval_timestamp)
+
+                logger.info(f"[MarketDataFetcher] ✅ OptionsClient succeeded for {symbol}, rows={len(df)}")
+
+                # Save to cache
+                if self.cache_manager:
+                    try:
+                        self.cache_manager.save_to_cache(symbol, df, f"AKShare (Options) v{self.options.version}", self.options.version)
+                    except Exception as cache_error:
+                        logger.warning(f"Failed to save Options data to cache: {cache_error}")
+
+                return {
+                    'data': df,
+                    'metadata': {
+                        'api_source': f"AKShare (Options) v{self.options.version}",
+                        'retrieval_timestamp': retrieval_timestamp,
+                        'data_freshness': data_freshness
+                    }
+                }
+            except Exception as e:
+                logger.warning(f"[MarketDataFetcher] ❌ OptionsClient failed for {symbol}: {e}")
+
+        # Try Level 2: Cache as last resort
+        if not prefer_cache and self.cache_manager:
+            try:
+                logger.info(f"[MarketDataFetcher] Attempting Cache as last resort for Options {symbol}")
+
+                if start_date:
+                    start_dt = datetime.strptime(start_date.replace('-', ''), '%Y%m%d') if len(start_date) == 8 else datetime.strptime(start_date, '%Y-%m-%d')
+                else:
+                    start_dt = datetime.now() - timedelta(days=90)
+
+                if end_date:
+                    end_dt = datetime.strptime(end_date.replace('-', ''), '%Y%m%d') if len(end_date) == 8 else datetime.strptime(end_date, '%Y-%m-%d')
+                else:
+                    end_dt = datetime.now()
+
+                df = self.cache_manager.get_from_cache(symbol, start_dt, end_dt)
+
+                if not df.empty:
+                    logger.info(f"[MarketDataFetcher] ✅ Cache hit for Options {symbol}, rows={len(df)}")
+                    logger.warning(f"[MarketDataFetcher] ⚠️ Using cached data for Options {symbol} (API failed)")
+
+                    retrieval_timestamp = df.iloc[0]['retrieval_timestamp'] if 'retrieval_timestamp' in df.columns else datetime.utcnow() - timedelta(hours=1)
+                    if isinstance(retrieval_timestamp, str):
+                        retrieval_timestamp = datetime.fromisoformat(retrieval_timestamp)
+
+                    data_freshness = self._calculate_data_freshness(retrieval_timestamp)
+                    api_source = df.iloc[0]['api_source'] if 'api_source' in df.columns else "Cache (Options)"
+
+                    return {
+                        'data': df,
+                        'metadata': {
+                            'api_source': f"Cache ({api_source})",
+                            'retrieval_timestamp': retrieval_timestamp,
+                            'data_freshness': data_freshness
+                        }
+                    }
+            except Exception as e:
+                logger.error(f"[MarketDataFetcher] ❌ Cache failed for Options {symbol}: {e}")
+
+        # All sources failed for Options
+        logger.error(f"[MarketDataFetcher] ❌ ALL SOURCES FAILED for Options {symbol}")
+        raise NoDataAvailableError(f"All data sources failed for Options {symbol}")

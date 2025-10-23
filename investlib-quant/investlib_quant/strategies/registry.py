@@ -109,8 +109,18 @@ class StrategyRegistry:
         if not info:
             raise ValueError(f"策略不存在: {name}")
 
+        # Extract default values from parameters (handle both dict and simple value formats)
+        default_params = {}
+        for param_name, param_info in info.parameters.items():
+            if isinstance(param_info, dict):
+                # Parameter is a dict with 'default' key
+                default_params[param_name] = param_info.get('default')
+            else:
+                # Parameter is a simple value
+                default_params[param_name] = param_info
+
         # 合并默认参数和用户参数
-        params = {**info.parameters, **kwargs}
+        params = {**default_params, **kwargs}
 
         # 创建实例
         return info.strategy_class(**params)

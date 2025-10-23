@@ -22,8 +22,9 @@ st.markdown("""
 MyInvest 系统组件、数据源和自动化健康状况的实时监控。
 """)
 
-# Database path
-DB_PATH = "/Users/pw/ai/myinvest/data/myinvest.db"
+# Database path - use environment variable or default
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////Users/pw/ai/myinvest/data/myinvest.db")
+DB_PATH = DATABASE_URL.replace("sqlite:///", "")
 
 # === Section 1: Overall System Health ===
 st.header("🏥 系统健康总览")
@@ -266,11 +267,11 @@ if db_healthy:
         # Recent recommendations
         recent_recs = pd.read_sql_query("""
             SELECT
-                DATE(created_at) as date,
+                DATE(created_timestamp) as date,
                 COUNT(*) as count
             FROM investment_recommendations
-            WHERE created_at >= datetime('now', '-7 days')
-            GROUP BY DATE(created_at)
+            WHERE created_timestamp >= datetime('now', '-7 days')
+            GROUP BY DATE(created_timestamp)
             ORDER BY date DESC
         """, conn)
 

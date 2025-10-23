@@ -37,7 +37,8 @@ class KrollStrategy:
         take_profit_pct: float = 5.0,
         base_position_pct: float = 12.0,
         reduced_position_pct: float = 8.0,
-        high_volatility_threshold: float = 3.0
+        high_volatility_threshold: float = 3.0,
+        position_size_pct: float = None  # 兼容参数优化器
     ):
         """Initialize Kroll strategy parameters.
 
@@ -54,7 +55,13 @@ class KrollStrategy:
             base_position_pct: Base position size (default 12%)
             reduced_position_pct: Reduced position for high volatility (default 8%)
             high_volatility_threshold: ATR% threshold for high volatility (default 3%)
+            position_size_pct: Alias for base_position_pct (for optimizer compatibility)
         """
+        # 支持 position_size_pct 别名（用于参数优化器）
+        if position_size_pct is not None:
+            base_position_pct = position_size_pct
+            reduced_position_pct = position_size_pct * 0.67  # 降低到67%
+
         self.ma_period = ma_period
         self.volume_period = volume_period
         self.rsi_period = rsi_period
@@ -67,6 +74,7 @@ class KrollStrategy:
         self.base_position_pct = base_position_pct
         self.reduced_position_pct = reduced_position_pct
         self.high_volatility_threshold = high_volatility_threshold
+        self.position_size_pct = base_position_pct  # 保存用于输出
         self.logger = logging.getLogger(__name__)
 
     def calculate_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -189,8 +197,9 @@ class KrollStrategy:
         Returns:
             Risk metrics dictionary
         """
-        entry_price = signal_data['entry_price']
-        position_size_pct = signal_data['position_size_pct']
+        # 确保价格和仓位大小是数值类型
+        entry_price = float(signal_data['entry_price'])
+        position_size_pct = float(signal_data['position_size_pct'])
 
         # Calculate stop-loss and take-profit (Kroll: tighter stops, conservative targets)
         stop_loss = entry_price * (1 - self.stop_loss_pct / 100)

@@ -19,8 +19,9 @@ st.markdown("""
 只有已审批的策略会被自动调度器使用。
 """)
 
-# Connect to database
-DB_PATH = "/Users/pw/ai/myinvest/data/myinvest.db"
+# Connect to database - use environment variable or default
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////Users/pw/ai/myinvest/data/myinvest.db")
+DB_PATH = DATABASE_URL.replace("sqlite:///", "")
 
 def get_pending_approvals():
     """获取所有待审批的策略。"""

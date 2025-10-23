@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_system"
+
+[project]
+name = "investlib-optimizer"
+version = "0.3.0"
+description = "MyInvest V0.3 - Parameter optimization with grid search and walk-forward validation"
+authors = [
+    {name = "MyInvest Team"}
+]
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "plotly>=5.17.0",
+    "scipy>=1.11.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["investlib_optimizer*"]

@@ -1,0 +1,10 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_system"
+
+[project]
+name = "investlib-margin"
+version = "0.3.0"
+description = "MyInvest V0.3 - Margin calculation for futures and options"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24.0"]
