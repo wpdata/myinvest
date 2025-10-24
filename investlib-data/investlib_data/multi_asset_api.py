@@ -151,6 +151,127 @@ def get_continuous_contract_code(futures_symbol: str) -> str:
     return futures_symbol
 
 
+def handle_continuous_contract(futures_symbol: str, data_fetcher) -> 'pd.DataFrame':
+    """Handle futures contract rollover by fetching continuous price series.
+
+    Args:
+        futures_symbol: Specific futures contract (e.g., 'IF2506.CFFEX')
+        data_fetcher: MarketDataFetcher instance
+
+    Returns:
+        Continuous price series DataFrame
+
+    Implementation:
+        - Converts specific contract to continuous contract code (e.g., IF888)
+        - Fetches continuous price series from data source
+        - Handles rollover gaps automatically via continuous contract
+    """
+    import pandas as pd
+
+    continuous_code = get_continuous_contract_code(futures_symbol)
+
+    logger.info(f"[handle_continuous_contract] Converting {futures_symbol} → {continuous_code}")
+
+    try:
+        # Fetch continuous contract data
+        result = data_fetcher.fetch_with_fallback(continuous_code)
+        df = result['data']
+
+        logger.info(f"[handle_continuous_contract] ✓ Fetched continuous data for {continuous_code}, rows={len(df)}")
+        return df
+
+    except Exception as e:
+        logger.warning(f"[handle_continuous_contract] Failed to fetch continuous contract {continuous_code}: {e}")
+        logger.info(f"[handle_continuous_contract] Falling back to specific contract {futures_symbol}")
+
+        # Fallback to specific contract
+        result = data_fetcher.fetch_with_fallback(futures_symbol)
+        return result['data']
+
+
+def validate_options_data_completeness(df: 'pd.DataFrame', symbol: str) -> dict:
+    """Validate options data completeness for Greeks calculation.
+
+    Args:
+        df: Options data DataFrame
+        symbol: Options symbol
+
+    Returns:
+        Dict with validation results:
+            - 'is_complete': bool
+            - 'missing_fields': list of missing field names
+            - 'warnings': list of warning messages
+
+    Required Fields for Greeks:
+        - Implied Volatility (IV): For accurate Greeks calculation
+        - Expiry Date: Time to expiration (T)
+        - Strike Price: For moneyness calculation
+        - Underlying Price: For delta/gamma
+
+    If missing, function returns warnings for fallback to historical volatility.
+    """
+    import pandas as pd
+
+    required_fields = {
+        'expiry_date': '到期日',
+        'strike_price': '行权价',
+        'underlying_price': '标的价格',
+        'implied_volatility': '隐含波动率'
+    }
+
+    missing_fields = []
+    warnings = []
+
+    # Check for required fields
+    for field_en, field_cn in required_fields.items():
+        if field_en not in df.columns and field_cn not in df.columns:
+            missing_fields.append(field_cn)
+
+    # Generate warnings
+    if 'implied_volatility' in missing_fields or '隐含波动率' in missing_fields:
+        warnings.append(
+            f"⚠️ 警告：{symbol} 缺少隐含波动率数据，将使用历史波动率计算Greeks（精度可能降低）"
+        )
+
+    if 'expiry_date' in missing_fields or '到期日' in missing_fields:
+        warnings.append(
+            f"⚠️ 警告：{symbol} 缺少到期日数据，Greeks计算可能不准确"
+        )
+
+    if 'strike_price' in missing_fields or '行权价' in missing_fields:
+        warnings.append(
+            f"❌ 错误：{symbol} 缺少行权价数据，无法计算Greeks"
+        )
+
+    if 'underlying_price' in missing_fields or '标的价格' in missing_fields:
+        warnings.append(
+            f"❌ 错误：{symbol} 缺少标的价格数据，无法计算Greeks"
+        )
+
+    is_complete = len(missing_fields) == 0
+
+    result = {
+        'is_complete': is_complete,
+        'missing_fields': missing_fields,
+        'warnings': warnings,
+        'can_calculate_greeks': len([w for w in warnings if '❌' in w]) == 0
+    }
+
+    # Log warnings
+    for warning in warnings:
+        if '❌' in warning:
+            logger.error(f"[validate_options_data] {warning}")
+        else:
+            logger.warning(f"[validate_options_data] {warning}")
+
+    if is_complete:
+        logger.info(f"[validate_options_data] ✓ {symbol} 数据完整，可计算Greeks")
+    else:
+        logger.warning(f"[validate_options_data] {symbol} 缺失字段: {', '.join(missing_fields)}")
+
+    return result
+
+
 # Example usage and testing
 if __name__ == '__main__':
     # Test asset type detection

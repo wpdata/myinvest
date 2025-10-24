@@ -146,6 +146,7 @@ class AppSettings(BaseSettings):
         env_file = '.env'
         env_nested_delimiter = '__'
         case_sensitive = False
+        extra = 'ignore'  # Allow extra fields for backward compatibility with V0.2
 
 
 # Global singleton instance

@@ -181,6 +181,17 @@ class BacktestRunner:
                             f"  Source: {data_sources[symbol]}"
                         )
 
+                    # Check if strategy needs multi-timeframe data
+                    strategy_class_name = strategy.__class__.__name__
+                    if strategy_class_name == 'MultiTimeframeStrategy':
+                        # Add weekly data for multi-timeframe strategies
+                        self.logger.info(f"📊 Preparing multi-timeframe data for {symbol}...")
+                        from investlib_data.resample import resample_to_weekly, align_timeframes
+
+                        weekly_data = resample_to_weekly(market_data)
+                        market_data = align_timeframes(market_data, weekly_data)
+                        self.logger.info(f"✓ Added weekly indicators to daily data")
+
                     all_data[symbol] = market_data
                     self.logger.info(
                         f"✓ Loaded {len(market_data)} days of data for {symbol} "
@@ -235,6 +246,16 @@ class BacktestRunner:
                         signals_generated += 1
 
                         if signal and signal.get('action') in ['BUY', 'STRONG_BUY']:
+                            # Check if we already have a position (avoid stacking positions)
+                            current_position = portfolio.positions.get(symbol, 0)
+                            if current_position > 0:
+                                # Skip BUY signal if already holding position
+                                self.logger.debug(
+                                    f"[BacktestRunner] Skipping BUY signal for {symbol} "
+                                    f"(already holding {current_position} shares)"
+                                )
+                                continue
+
                             # Calculate position size
                             position_size_pct = signal.get('position_size_pct', 10)
                             position_value = capital * (position_size_pct / 100)
@@ -287,6 +308,31 @@ class BacktestRunner:
             final_prices = {}
             for symbol, df in all_data.items():
                 final_prices[symbol] = df.iloc[-1]['close']
+
+            # Close any open positions at the end of backtest
+            # This ensures all trades are paired (BUY has corresponding SELL)
+            open_positions = list(portfolio.positions.keys())
+            if open_positions:
+                final_date = all_dates[-1]
+                self.logger.info(
+                    f"[BacktestRunner] Closing {len(open_positions)} open position(s) at backtest end"
+                )
+                for symbol in open_positions:
+                    quantity = portfolio.positions[symbol]
+                    if quantity > 0:
+                        price = final_prices.get(symbol, 0)
+                        if price > 0:
+                            portfolio.sell(
+                                symbol=symbol,
+                                quantity=quantity,
+                                price=price,
+                                timestamp=final_date,
+                                data_source='backtest_close'
+                            )
+                            trades_executed += 1
+                            self.logger.info(
+                                f"[BacktestRunner] Closed {quantity} {symbol} @ {price:.2f}"
+                            )
 
             # Get portfolio summary
             summary = portfolio.get_summary(final_prices)

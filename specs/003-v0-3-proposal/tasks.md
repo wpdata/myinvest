@@ -470,7 +470,7 @@ psutil  # Memory monitoring
 
 ---
 
-## Phase 7: User Story 5 - Futures & Options Support (Priority P1, Days 17-24)
+## Phase 7: User Story 5 - Futures & Options Support (Priority P1, Days 17-24) ✅ COMPLETE
 
 **Story Goal**: Multi-asset trading with margin, Greeks, forced liquidation
 
@@ -484,7 +484,7 @@ psutil  # Memory monitoring
 - ✅ Futures contract rollover maintains continuous data
 - ✅ Option missing data warning displayed
 
-### T031 [X] [P] - Create investlib-margin Library
+### T031 [X] [P] - Create investlib-margin Library ✅
 **Story**: US5
 **File**: `investlib-margin/`
 **Description**: Margin calculation library for futures/options
@@ -494,7 +494,7 @@ psutil  # Memory monitoring
 - is_forced_liquidation(current_price, liquidation_price, direction) → bool
 - Test: Margin calculations accurate (±1%)
 
-### T032 [X] [P] - Create investlib-greeks Library
+### T032 [X] [P] - Create investlib-greeks Library ✅
 **Story**: US5
 **File**: `investlib-greeks/`
 **Description**: Options Greeks calculation using py_vollib_vectorized
@@ -504,7 +504,7 @@ psutil  # Memory monitoring
 - VolatilityManager class with HV fallback
 - Test: Greeks calculations match py_vollib reference values
 
-### T033 [P] - Extend MarketDataFetcher for Futures/Options
+### T033 [X] [P] - Extend MarketDataFetcher for Futures/Options ✅
 **Story**: US5
 **File**: `investlib-data/src/investlib_data/market_api.py`
 **Description**: Add futures/options data fetching (implements FR-032 - data source upgrade)
@@ -516,7 +516,7 @@ psutil  # Memory monitoring
 - validate_options_data_completeness(data) → warn if Greeks inputs (IV, expiry) missing
 - Test: Fetches IF2506.CFFEX data successfully with efinance, falls back to AkShare on failure
 
-### T034 [P] - Create BaseStrategy Subclasses
+### T034 [X] [P] - Create BaseStrategy Subclasses ✅
 **Story**: US5
 **File**: `investlib-advisors/src/investlib_advisors/base.py`
 **Description**: Split strategy base classes by asset type
@@ -526,7 +526,7 @@ psutil  # Memory monitoring
 - OptionsStrategy extends BaseStrategy (add Greeks tracking)
 - Test: All three subclasses instantiate correctly
 
-### T035 [P] - Implement FuturesStrategy: Trend Following
+### T035 [X] [P] - Implement FuturesStrategy: Trend Following ✅
 **Story**: US5
 **File**: `investlib-advisors/src/investlib_advisors/futures/trend_following.py`
 **Description**: Futures-specific trend following strategy
@@ -536,7 +536,7 @@ psutil  # Memory monitoring
 - handle_rollover() for contract expiry
 - Test: Generates long/short signals for IF2506
 
-### T036 [P] - Implement OptionsStrategy: Covered Call
+### T036 [X] [P] - Implement OptionsStrategy: Covered Call ✅
 **Story**: US5
 **File**: `investlib-advisors/src/investlib_advisors/options/covered_call.py`
 **Description**: Covered call option strategy
@@ -546,7 +546,7 @@ psutil  # Memory monitoring
 - handle_expiry() for option expiration
 - Test: Generates covered call position
 
-### T037 - Upgrade BacktestEngine for Multi-Asset
+### T037 [X] - Upgrade BacktestEngine for Multi-Asset ✅
 **Story**: US5
 **File**: `investlib-backtest/src/investlib_backtest/engine.py`
 **Description**: Polymorphic dispatch for different asset types
@@ -557,7 +557,7 @@ psutil  # Memory monitoring
 - OptionsBacktestEngine (expiry handling, Greeks tracking)
 - Test: Backtests stock, futures, options correctly
 
-### T038 - Implement Forced Liquidation Logic
+### T038 [X] - Implement Forced Liquidation Logic ✅
 **Story**: US5
 **File**: `investlib-backtest/src/investlib_backtest/futures_engine.py`
 **Description**: Forced liquidation simulation for futures
@@ -566,7 +566,7 @@ psutil  # Memory monitoring
 - Record liquidation event in backtest results
 - Test: Forced liquidation triggered correctly
 
-### T039 - Implement Option Expiry Handling
+### T039 [X] - Implement Option Expiry Handling ✅
 **Story**: US5
 **File**: `investlib-backtest/src/investlib_backtest/options_engine.py`
 **Description**: Option expiry logic (European-style, expiry-only exercise)
@@ -575,7 +575,7 @@ psutil  # Memory monitoring
 - expire_worthless() for out-of-money options
 - Test: Options exercised/expired correctly on expiry date
 
-### T040 - Update Watchlist UI for Multi-Asset
+### T040 [X] - Update Watchlist UI for Multi-Asset ✅
 **Story**: US5
 **File**: `myinvest-app/src/myinvest_app/ui/9_watchlist.py`
 **Description**: Add asset type selector to watchlist UI
@@ -584,11 +584,11 @@ psutil  # Memory monitoring
 - Filter by asset type
 - Test: Futures/options display with correct badges
 
-**🔹 Checkpoint US5**: Futures & options fully supported with margin/Greeks
+**🔹 Checkpoint US5**: ✅ COMPLETE - Futures & options fully supported with margin/Greeks
 
 ---
 
-## Phase 8: User Story 6 - Risk Dashboard (Priority P1, Days 25-29)
+## Phase 8: User Story 6 - Risk Dashboard (Priority P1, Days 25-29) ✅ COMPLETE
 
 **Story Goal**: Real-time risk monitoring with VaR, margin, correlation
 
@@ -602,14 +602,14 @@ psutil  # Memory monitoring
 - ✅ Correlation matrix: "600519 vs IF2506 correlation: -0.45"
 - ✅ Auto-refreshes every 5 seconds
 
-### T041 [P] - Create investlib-risk Library
+### T041 [X] ✅ [P] - Create investlib-risk Library
 **Story**: US6
 **File**: `investlib-risk/`
 **Description**: Risk metrics calculation library
 - RiskMetricsCalculator class
 - Test: Library imports successfully
 
-### T042 [P] - Implement VaR Calculator (Historical Simulation)
+### T042 [X] ✅ [P] - Implement VaR Calculator (Historical Simulation)
 **Story**: US6
 **File**: `investlib-risk/src/investlib_risk/var.py`
 **Description**: Historical simulation VaR
@@ -618,7 +618,7 @@ psutil  # Memory monitoring
 - calculate_portfolio_returns_with_futures(positions) → handles leverage
 - Test: VaR calculation within 5% of expected
 
-### T043 [P] - Implement Correlation Matrix Calculator
+### T043 [X] ✅ [P] - Implement Correlation Matrix Calculator
 **Story**: US6
 **File**: `investlib-risk/src/investlib_risk/correlation.py`
 **Description**: Rolling correlation with caching
@@ -628,7 +628,7 @@ psutil  # Memory monitoring
 - highlight_high_correlation(corr_matrix, threshold=0.7) → list of pairs
 - Test: Correlation matrix calculated correctly
 
-### T044 [P] - Implement Concentration Risk Calculator
+### T044 [X] ✅ [P] - Implement Concentration Risk Calculator
 **Story**: US6
 **File**: `investlib-risk/src/investlib_risk/concentration.py`
 **Description**: Position concentration analysis
@@ -636,7 +636,7 @@ psutil  # Memory monitoring
 - calculate_industry_concentration(positions, industry_map) → dict
 - Test: Identifies max concentration correctly
 
-### T045 [P] - Implement Margin Risk Calculator
+### T045 [X] ✅ [P] - Implement Margin Risk Calculator
 **Story**: US6
 **File**: `investlib-risk/src/investlib_risk/margin_risk.py`
 **Description**: Futures/options margin risk assessment
@@ -645,7 +645,7 @@ psutil  # Memory monitoring
 - generate_liquidation_warnings(positions) → list of warnings
 - Test: Margin risk calculated correctly
 
-### T046 [P] - Implement Greeks Aggregator
+### T046 [X] ✅ [P] - Implement Greeks Aggregator
 **Story**: US6
 **File**: `investlib-greeks/src/investlib_greeks/aggregator.py`
 **Description**: Aggregate Greeks across positions
@@ -654,7 +654,7 @@ psutil  # Memory monitoring
 - Multiply by quantity and multiplier
 - Test: Aggregation sums correctly
 
-### T047 - Implement Risk Dashboard Orchestrator
+### T047 [X] ✅ - Implement Risk Dashboard Orchestrator
 **Story**: US6
 **File**: `investlib-risk/src/investlib_risk/dashboard.py`
 **Description**: Coordinate all risk calculations
@@ -664,7 +664,7 @@ psutil  # Memory monitoring
 - Cache results to avoid recalculation
 - Test: All metrics calculated in <200ms
 
-### T048 - Create Streamlit Risk Dashboard Page
+### T048 [X] ✅ - Create Streamlit Risk Dashboard Page
 **Story**: US6
 **File**: `myinvest-app/src/myinvest_app/ui/12_risk.py`
 **Description**: Real-time risk dashboard UI
@@ -678,11 +678,13 @@ psutil  # Memory monitoring
 - Auto-refresh with streamlit-autorefresh (5 seconds)
 - Test: Dashboard displays all metrics and refreshes
 
-**🔹 Checkpoint US6**: Risk dashboard operational with real-time updates
+**🔹 Checkpoint US6**: ✅ COMPLETE - Risk dashboard operational with real-time updates
 
 ---
 
-## Phase 9: User Story 7 - Combination Strategy Builder (Priority P1, Days 30-34)
+---
+
+## Phase 9: User Story 7 - Combination Strategy Builder (Priority P1, Days 30-34) ✅ COMPLETE
 
 **Story Goal**: UI-driven multi-leg strategy construction
 
@@ -733,7 +735,7 @@ psutil  # Memory monitoring
 - Show breakeven points
 - Test: Butterfly spread shows characteristic shape
 
-### T054 - Implement Combination Backtest Engine
+### T054 [X] ✅ - Implement Combination Backtest Engine
 **Story**: US7
 **File**: `investlib-backtest/src/investlib_backtest/combination_backtest.py`
 **Description**: Backtest multi-leg strategies
@@ -743,7 +745,7 @@ psutil  # Memory monitoring
 - Calculate combined Sharpe ratio and margin
 - Test: Covered call backtest executes correctly
 
-### T055 - Create Streamlit Combination Strategy Builder Page
+### T055 [X] ✅ - Create Streamlit Combination Strategy Builder Page
 **Story**: US7
 **File**: `myinvest-app/src/myinvest_app/ui/11_builder.py`
 **Description**: Interactive strategy builder UI
@@ -755,7 +757,7 @@ psutil  # Memory monitoring
 - Save combination to database
 - Test: UI builds and backtests butterfly spread
 
-### T056 - Add Combination View to Holdings Page
+### T056 [X] ✅ - Add Combination View to Holdings Page
 **Story**: US7
 **File**: `myinvest-app/src/myinvest_app/ui/holdings.py`
 **Description**: Display multi-leg positions
@@ -769,7 +771,7 @@ psutil  # Memory monitoring
 
 ---
 
-## Phase 10: User Story 8 - Multi-Timeframe Strategy (Priority P2, Days 35-37)
+## Phase 10: User Story 8 - Multi-Timeframe Strategy (Priority P2, Days 35-37) ✅ COMPLETE
 
 **Story Goal**: Weekly trend + daily timing signal combination
 
@@ -779,7 +781,7 @@ psutil  # Memory monitoring
 - ✅ UI selector: "Daily" | "Weekly" | "Daily+Weekly Combination"
 - ✅ Recommendation card shows "Weekly trend: ↑ Upward"
 
-### T057 [P] - Implement Weekly Data Resampling
+### T057 [X] ✅ [P] - Implement Weekly Data Resampling
 **Story**: US8
 **File**: `investlib-data/src/investlib_data/resample.py`
 **Description**: Convert daily data to weekly
@@ -787,7 +789,7 @@ psutil  # Memory monitoring
 - Aggregation: OHLC resampling
 - Test: Daily data correctly resampled to weekly
 
-### T058 [P] - Implement Weekly Indicator Calculator
+### T058 [X] ✅ [P] - Implement Weekly Indicator Calculator
 **Story**: US8
 **File**: `investlib-advisors/src/investlib_advisors/weekly_indicators.py`
 **Description**: Calculate indicators on weekly data
@@ -796,7 +798,7 @@ psutil  # Memory monitoring
 - detect_weekly_trend(weekly_df) → 'up' | 'down' | 'sideways'
 - Test: Weekly MA and MACD calculated correctly
 
-### T059 - Implement Multi-Timeframe Strategy
+### T059 [X] ✅ - Implement Multi-Timeframe Strategy
 **Story**: US8
 **File**: `investlib-advisors/src/investlib_advisors/multi_timeframe.py`
 **Description**: Combine weekly trend + daily signals
@@ -806,7 +808,7 @@ psutil  # Memory monitoring
 - combine_signals(weekly_trend, daily_signal) → final_signal (only if aligned)
 - Test: Generates BUY only when weekly up + daily breakout
 
-### T060 - Add Multi-Timeframe UI Selector
+### T060 [X] ✅ - Add Multi-Timeframe UI Selector
 **Story**: US8
 **File**: `myinvest-app/src/myinvest_app/ui/3_recommendations.py`
 **Description**: Add timeframe selector to recommendations page
@@ -818,7 +820,7 @@ psutil  # Memory monitoring
 
 ---
 
-## Phase 11: User Story 9 - Technical Indicators Expansion (Priority P2, Days 38-40)
+## Phase 11: User Story 9 - Technical Indicators Expansion (Priority P2, Days 38-40) ✅ COMPLETE
 
 **Story Goal**: Add MACD, KDJ, Bollinger Bands, volume patterns
 
@@ -829,7 +831,7 @@ psutil  # Memory monitoring
 - ✅ Indicator selector shows all options
 - ✅ Backtest shows multi-indicator performance
 
-### T061 [P] - Implement MACD Indicator
+### T061 [X] ✅ [P] - Implement MACD Indicator
 **Story**: US9
 **File**: `investlib-advisors/src/investlib_advisors/indicators/macd.py`
 **Description**: MACD calculation and signal generation
@@ -837,7 +839,7 @@ psutil  # Memory monitoring
 - detect_macd_crossover(macd_line, signal_line) → 'bullish' | 'bearish' | None
 - Test: MACD crossover detected correctly
 
-### T062 [P] - Implement KDJ Indicator
+### T062 [X] ✅ [P] - Implement KDJ Indicator
 **Story**: US9
 **File**: `investlib-advisors/src/investlib_advisors/indicators/kdj.py`
 **Description**: KDJ (Stochastic Oscillator) calculation
@@ -845,7 +847,7 @@ psutil  # Memory monitoring
 - detect_kdj_signal(k_line, d_line, zone) → 'buy' | 'sell' | None
 - Test: KDJ oversold buy signal detected
 
-### T063 [P] - Implement Bollinger Bands Indicator
+### T063 [X] ✅ [P] - Implement Bollinger Bands Indicator
 **Story**: US9
 **File**: `investlib-advisors/src/investlib_advisors/indicators/bollinger.py`
 **Description**: Bollinger Bands calculation
@@ -853,7 +855,7 @@ psutil  # Memory monitoring
 - detect_bollinger_signal(price, upper, lower) → 'overbought' | 'oversold' | None
 - Test: Price at lower band detected as oversold
 
-### T064 [P] - Implement Volume Pattern Analysis
+### T064 [X] ✅ [P] - Implement Volume Pattern Analysis
 **Story**: US9
 **File**: `investlib-advisors/src/investlib_advisors/indicators/volume.py`
 **Description**: Volume pattern recognition
@@ -862,7 +864,7 @@ psutil  # Memory monitoring
 - detect_volume_divergence(price, volume) → bool
 - Test: Volume spike detected correctly
 
-### T065 - Create Multi-Indicator Combination Strategy
+### T065 [X] ✅ - Create Multi-Indicator Combination Strategy
 **Story**: US9
 **File**: `investlib-advisors/src/investlib_advisors/multi_indicator.py`
 **Description**: Combine multiple indicators
@@ -871,7 +873,7 @@ psutil  # Memory monitoring
 - generate_signal() → combine all indicators (voting or weighted)
 - Test: Multi-indicator strategy generates signals
 
-### T066 - Add Indicator Selector to Strategy Config UI
+### T066 [X] ✅ - Add Indicator Selector to Strategy Config UI
 **Story**: US9
 **File**: `myinvest-app/src/myinvest_app/ui/strategy_config.py`
 **Description**: UI for selecting indicators
@@ -883,9 +885,9 @@ psutil  # Memory monitoring
 
 ---
 
-## Phase 12: Polish & Cross-Cutting Concerns (Days 41-43)
+## Phase 12: Polish ## Phase 12: Polish & Cross-Cutting Concerns (Days 41-43) Cross-Cutting Concerns (Days 41-43) ✅ COMPLETE
 
-### T067 [P] - Add Streamlit Auto-Refresh for Risk Dashboard
+### T067 [X] ✅ [P] - Add Streamlit Auto-Refresh for Risk Dashboard
 **Story**: Polish
 **File**: `myinvest-app/src/myinvest_app/ui/12_risk.py`
 **Description**: 5-second auto-refresh
@@ -893,7 +895,7 @@ psutil  # Memory monitoring
 - Add `st_autorefresh(interval=5000, key="risk_refresh")`
 - Test: Dashboard refreshes every 5 seconds
 
-### T068 [DEPRECATED] - Chinese Localization Enforcement Audit
+### T068 [X] ✅ [DEPRECATED] - Chinese Localization Enforcement Audit
 **Story**: Polish (NOTE: Core localization moved to T003b in Phase 1)
 **File**: `myinvest-app/src/myinvest_app/ui/*.py`
 **Description**: Constitution Principle I compliance audit (NOT initial implementation)
@@ -907,7 +909,7 @@ psutil  # Memory monitoring
 - Test: Zero hardcoded English strings found in user-facing UI
 - **This is now a quality gate, not a retrofitting task**
 
-### T069 [P] - Add Data Source Freshness Indicators
+### T069 [X] ✅ [P] - Add Data Source Freshness Indicators
 **Story**: Polish
 **File**: `myinvest-app/src/myinvest_app/ui/`
 **Description**: Display data source and timestamp
@@ -915,7 +917,7 @@ psutil  # Memory monitoring
 - Show data freshness: "实时" (green) | "延迟15分钟" (yellow) | "历史数据" (gray)
 - Test: Data source displayed on all relevant pages
 
-### T070 [P] - Implement Configuration Validation Tests
+### T070 [X] ✅ [P] - Implement Configuration Validation Tests
 **Story**: Polish
 **File**: `tests/unit/test_config_validation.py`
 **Description**: Unit tests for Pydantic config
@@ -924,7 +926,7 @@ psutil  # Memory monitoring
 - Test: .env file loads correctly
 - Test: All validators pass
 
-### T071 [P] - Add Error Logging for All Modules
+### T071 [X] ✅ [P] - Add Error Logging for All Modules
 **Story**: Polish
 **File**: All modules
 **Description**: Comprehensive error logging
@@ -933,7 +935,7 @@ psutil  # Memory monitoring
 - Chinese error messages where user-facing
 - Test: Errors logged to file
 
-### T072 [P] - Create End-to-End Integration Test Suite
+### T072 [X] ✅ [P] - Create End-to-End Integration Test Suite
 **Story**: Polish
 **File**: `tests/integration/`
 **Description**: Integration tests for critical flows
@@ -943,7 +945,7 @@ psutil  # Memory monitoring
 - test_report_export_all_formats.py
 - Test: All integration tests pass
 
-### T073 - Performance Optimization: Cache Frequently Accessed Data
+### T073 [X] ✅ - Performance Optimization: Cache Frequently Accessed Data
 **Story**: Polish
 **File**: `investlib-data/src/investlib_data/cache.py`
 **Description**: Implement TTL-based API response caching layer (SINGLE-PROCESS cache for API calls)
@@ -954,7 +956,7 @@ psutil  # Memory monitoring
 - **Not to be confused with**: T013 (SharedMemoryCache for parallel backtest workers)
 - Test: Cache hit rate >80% for repeated queries within TTL window
 
-### T074 - Memory Profiling and Optimization
+### T074 [X] ✅ - Memory Profiling and Optimization
 **Story**: Polish
 **File**: N/A
 **Description**: Profile memory usage and optimize
@@ -963,7 +965,7 @@ psutil  # Memory monitoring
 - Fix memory leaks in parallel backtest
 - Test: 10-stock backtest uses <500MB RAM
 
-### T075 - Create V0.3 User Documentation
+### T075 [X] ✅ - Create V0.3 User Documentation
 **Story**: Polish
 **File**: `docs/v0.3_user_guide.md`
 **Description**: User guide in Chinese
@@ -975,7 +977,7 @@ psutil  # Memory monitoring
 - Risk dashboard interpretation
 - Test: Documentation covers all features
 
-### T076 - Create V0.3 Developer Documentation
+### T076 [X] ✅ - Create V0.3 Developer Documentation
 **Story**: Polish
 **File**: `docs/v0.3_developer_guide.md`
 **Description**: Developer documentation

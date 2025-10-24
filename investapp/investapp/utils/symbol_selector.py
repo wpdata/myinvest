@@ -35,6 +35,44 @@ def get_user_holdings_symbols() -> List[str]:
         return []
 
 
+def get_watchlist_symbols() -> List[str]:
+    """从监视列表获取股票代码。
+
+    Returns:
+        股票代码列表，例如 ['600519.SH', '000001.SZ']
+    """
+    try:
+        # Import WatchlistDB
+        import os
+        DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////Users/pw/ai/myinvest/data/myinvest.db")
+        DB_PATH = DATABASE_URL.replace("sqlite:///", "")
+
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../investlib-data'))
+        from investlib_data.watchlist_db import WatchlistDB
+
+        watchlist_db = WatchlistDB(DB_PATH)
+        symbols_data = watchlist_db.get_all_symbols(status='active')
+        symbols = [item['symbol'] for item in symbols_data]
+        return sorted(symbols)
+    except Exception as e:
+        st.warning(f"无法获取监视列表: {e}")
+        return []
+
+
+def get_all_available_symbols() -> List[str]:
+    """获取所有可用的股票代码（持仓 + 监视列表）。
+
+    Returns:
+        去重后的股票代码列表
+    """
+    holdings = get_user_holdings_symbols()
+    watchlist = get_watchlist_symbols()
+
+    # 合并并去重
+    all_symbols = list(set(holdings + watchlist))
+    return sorted(all_symbols)
+
+
 def render_symbol_selector(
     label: str = "股票代码",
     default_value: str = "600519.SH",
@@ -54,36 +92,38 @@ def render_symbol_selector(
     Returns:
         选中的股票代码（或多个代码，逗号分隔）
     """
-    # 获取用户已录入的持仓
-    holdings_symbols = get_user_holdings_symbols()
+    # 获取所有可用股票（持仓 + 监视列表）
+    available_symbols = get_all_available_symbols()
 
     # 确定默认帮助文本
     if help_text is None:
         if allow_multiple:
-            help_text = "从持仓中选择，或手动输入股票代码（多个代码用逗号分隔）"
+            help_text = "从持仓/监视列表选择，或手动输入股票代码（多个代码用逗号分隔）"
         else:
-            help_text = "从持仓中选择，或手动输入股票代码"
+            help_text = "从持仓/监视列表选择，或手动输入股票代码"
 
     # 创建两种输入方式
     input_mode = st.radio(
         "输入方式",
-        ["从持仓选择", "手动输入"],
+        ["从列表选择", "手动输入"],
         horizontal=True,
         key=f"{key}_mode" if key else None,
-        help="选择从已录入的持仓中选择，或手动输入新的股票代码"
+        help="从持仓或监视列表中选择，或手动输入新的股票代码"
     )
 
-    if input_mode == "从持仓选择":
-        if holdings_symbols:
-            # 显示持仓股票数量
-            st.caption(f"💼 已录入 {len(holdings_symbols)} 只股票")
+    if input_mode == "从列表选择":
+        if available_symbols:
+            # 显示股票来源统计
+            holdings_count = len(get_user_holdings_symbols())
+            watchlist_count = len(get_watchlist_symbols())
+            st.caption(f"💼 持仓 {holdings_count} 只 | 📋 监视 {watchlist_count} 只 | 总计 {len(available_symbols)} 只")
 
             if allow_multiple:
                 # 多选模式
                 selected_symbols = st.multiselect(
                     label,
-                    options=holdings_symbols,
-                    default=[holdings_symbols[0]] if holdings_symbols else [],
+                    options=available_symbols,
+                    default=[available_symbols[0]] if available_symbols else [],
                     help=help_text,
                     key=key
                 )
@@ -92,19 +132,19 @@ def render_symbol_selector(
                 # 单选模式
                 # 检查 default_value 是否在列表中
                 default_index = 0
-                if default_value in holdings_symbols:
-                    default_index = holdings_symbols.index(default_value)
+                if default_value in available_symbols:
+                    default_index = available_symbols.index(default_value)
 
                 selected_symbol = st.selectbox(
                     label,
-                    options=holdings_symbols,
+                    options=available_symbols,
                     index=default_index,
                     help=help_text,
                     key=key
                 )
                 return selected_symbol
         else:
-            st.warning("⚠️ 暂无持仓股票，请先在「持仓记录」页面录入")
+            st.warning("⚠️ 暂无股票，请先在「持仓记录」或「监视列表」页面添加")
             st.info("💡 您也可以切换到「手动输入」模式直接输入股票代码")
             return default_value
 
@@ -137,24 +177,28 @@ def render_symbol_selector_compact(
     Returns:
         选中的股票代码
     """
-    # 获取用户已录入的持仓
-    holdings_symbols = get_user_holdings_symbols()
+    # 获取所有可用股票（持仓 + 监视列表）
+    available_symbols = get_all_available_symbols()
 
-    if holdings_symbols:
-        # 创建选项：持仓股票 + "手动输入"选项
-        options = holdings_symbols + ["+ 手动输入新代码"]
+    if available_symbols:
+        # 创建选项：所有股票 + "手动输入"选项
+        options = available_symbols + ["+ 手动输入新代码"]
 
         # 检查 default_value 是否在列表中
-        if default_value in holdings_symbols:
-            default_index = holdings_symbols.index(default_value)
+        if default_value in available_symbols:
+            default_index = available_symbols.index(default_value)
         else:
-            default_index = len(holdings_symbols)  # 默认选择"手动输入"
+            default_index = len(available_symbols)  # 默认选择"手动输入"
+
+        # 统计数量
+        holdings_count = len(get_user_holdings_symbols())
+        watchlist_count = len(get_watchlist_symbols())
 
         selection = st.selectbox(
             "股票代码",
             options=options,
             index=default_index,
-            help=f"已录入 {len(holdings_symbols)} 只股票",
+            help=f"持仓 {holdings_count} 只 + 监视 {watchlist_count} 只",
             key=key
         )
 
@@ -170,8 +214,8 @@ def render_symbol_selector_compact(
         else:
             return selection
     else:
-        # 没有持仓，直接显示输入框
-        st.caption("⚠️ 暂无持仓，请先录入或手动输入")
+        # 没有可用股票，直接显示输入框
+        st.caption("⚠️ 暂无股票，请添加持仓或监视列表")
         return st.text_input(
             "股票代码",
             value=default_value,

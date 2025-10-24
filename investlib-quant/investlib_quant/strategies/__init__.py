@@ -22,6 +22,10 @@ from .stock_strategy import StockStrategy, SimpleStockStrategy
 from .futures_strategy import FuturesStrategy, SimpleTrendFuturesStrategy
 from .options_strategy import OptionsStrategy, SimpleVolatilityOptionsStrategy
 
+# V0.3: Advanced strategies
+from .multi_timeframe import MultiTimeframeStrategy
+from .multi_indicator import MultiIndicatorStrategy
+
 # 尝试导入Kroll策略（在旧位置）
 try:
     import sys
@@ -48,6 +52,9 @@ __all__ = [
     "SimpleStockStrategy",
     "SimpleTrendFuturesStrategy",
     "SimpleVolatilityOptionsStrategy",
+    # V0.3: Advanced strategies
+    "MultiTimeframeStrategy",
+    "MultiIndicatorStrategy",
 ]
 
 # 便捷函数
