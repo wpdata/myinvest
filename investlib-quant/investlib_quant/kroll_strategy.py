@@ -147,8 +147,23 @@ class KrollStrategy:
         if not rsi_ok:
             key_factors.append(f"OVERBOUGHT: RSI={rsi:.1f} > {self.rsi_overbought}")
 
+        # Check for sell signals (price below MA60 or RSI overbought)
+        price_below_ma = price < ma60
+        previous_above_ma = previous['close'] > previous['ma_60'] if 'ma_60' in previous else True
+
         # Determine action and confidence
-        if price_above_ma and volume_surge and rsi_ok:
+        # SELL conditions (exit signals)
+        if price_below_ma and previous_above_ma:
+            action = 'SELL'
+            confidence = 'HIGH'
+            key_factors.append(f"Price broke below MA60: {price:.2f} < {ma60:.2f}")
+        elif not rsi_ok:
+            # RSI超买也是卖出信号（风险控制）
+            action = 'SELL'
+            confidence = 'MEDIUM'
+            key_factors.append(f"Overbought exit: RSI={rsi:.1f} > {self.rsi_overbought}")
+        # BUY conditions (entry signals)
+        elif price_above_ma and volume_surge and rsi_ok:
             action = 'BUY'
             # Confidence based on RSI
             if rsi < self.rsi_high_confidence:
@@ -157,14 +172,10 @@ class KrollStrategy:
             else:
                 confidence = 'MEDIUM'
                 key_factors.append(f"Medium confidence: RSI={rsi:.1f} in [{self.rsi_high_confidence}, {self.rsi_overbought})")
-        elif not rsi_ok:
-            action = 'HOLD'
-            confidence = 'LOW'
-            key_factors.append("Holding: Market overbought")
         else:
             action = 'HOLD'
             confidence = 'LOW'
-            key_factors.append("No strong entry signal detected")
+            key_factors.append("No strong signal detected")
 
         # Determine position size based on volatility
         position_size = self.base_position_pct

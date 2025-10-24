@@ -125,10 +125,21 @@ class MarketRotationStrategy(BaseStrategy):
 
         # 情况1: 当前持有中证1000 ETF，检查是否需要卖出
         if current_holding == self.etf_symbol and position_entry_date:
-            # 计算持有天数
+            # 计算持有天数（按交易日计算，不是自然日）
             entry_date = pd.to_datetime(position_entry_date)
             latest_date = pd.to_datetime(idx_data.iloc[-1]['timestamp'])
-            holding_period = (latest_date - entry_date).days
+
+            # 找到入场日期在数据中的位置，计算已经过了多少个交易日
+            # 确保timestamp列是datetime类型
+            timestamps = pd.to_datetime(idx_data['timestamp'])
+            entry_idx_list = timestamps[timestamps >= entry_date].index
+            if len(entry_idx_list) > 0:
+                entry_idx = entry_idx_list[0]
+                current_idx = len(idx_data) - 1
+                holding_period = current_idx - entry_idx  # 交易日数量
+            else:
+                # 如果找不到入场日期，使用自然日作为fallback
+                holding_period = (latest_date - entry_date).days
 
             # 获取当前价格用于止损检查
             if not market_data.empty:
@@ -167,45 +178,43 @@ class MarketRotationStrategy(BaseStrategy):
             return {"action": "HOLD", "reason": f"持有中证1000 ETF（第{holding_period}天）"}
 
         # 情况2: 当前持有国债ETF或空仓，检查是否触发买入信号
-        # 检查最近N天的跌幅
-        recent_days = idx_data.tail(self.consecutive_days)
-
-        if len(recent_days) < self.consecutive_days:
+        # 检查最近N天的跌幅（需要N+1天数据来计算N天的涨跌幅）
+        required_days = self.consecutive_days + 1
+        if len(idx_data) < required_days:
             return {"action": "HOLD", "reason": "数据不足以判断连续跌幅"}
 
+        recent_days = idx_data.tail(required_days).copy()
+
         # 计算每日涨跌幅
-        recent_days = recent_days.copy()
         recent_days['pct_change'] = recent_days['close'].pct_change() * 100
 
-        # 检查是否连续N天都下跌超过阈值
-        decline_days = recent_days[recent_days['pct_change'] <= self.decline_threshold]
+        # 获取最后N天的涨跌幅（排除第一天，因为它的pct_change是NaN）
+        last_n_changes = recent_days['pct_change'].iloc[-self.consecutive_days:]
 
-        if len(decline_days) >= self.consecutive_days:
-            # 验证这些天是连续的（通过索引）
-            if decline_days.index.tolist() == list(range(
-                recent_days.index[-self.consecutive_days],
-                recent_days.index[-1] + 1
-            )):
-                # 触发买入信号
-                latest_data = idx_data.iloc[-1]
-                avg_decline = recent_days['pct_change'].tail(self.consecutive_days).mean()
+        # 检查最近N天是否都满足跌幅阈值
+        all_decline = all(last_n_changes <= self.decline_threshold)
 
-                return {
-                    "action": "SWITCH",
-                    "target_symbol": self.etf_symbol,
-                    "from_symbol": current_holding,
-                    "entry_price": float(market_data.iloc[-1]['close']) if not market_data.empty else 0,
-                    "position_size_pct": self.position_size_pct,
-                    "confidence": "HIGH" if avg_decline <= -2.0 else "MEDIUM",
-                    "reasoning": {
-                        "trigger": f"大盘连续{self.consecutive_days}日下跌",
-                        "index_symbol": self.index_symbol,
-                        "avg_decline": round(avg_decline, 2),
-                        "decline_days": decline_days['pct_change'].tolist(),
-                        "target_holding_days": self.holding_days,
-                        "action": f"切换到中证1000 ETF，持有{self.holding_days}个交易日"
-                    }
+        if all_decline:
+            # 触发买入信号
+            latest_data = idx_data.iloc[-1]
+            avg_decline = last_n_changes.mean()
+
+            return {
+                "action": "SWITCH",
+                "target_symbol": self.etf_symbol,
+                "from_symbol": current_holding,
+                "entry_price": float(market_data.iloc[-1]['close']) if not market_data.empty else 0,
+                "position_size_pct": self.position_size_pct,
+                "confidence": "HIGH" if avg_decline <= -2.0 else "MEDIUM",
+                "reasoning": {
+                    "trigger": f"大盘连续{self.consecutive_days}日下跌",
+                    "index_symbol": self.index_symbol,
+                    "avg_decline": round(avg_decline, 2),
+                    "decline_days": last_n_changes.tolist(),
+                    "target_holding_days": self.holding_days,
+                    "action": f"切换到中证1000 ETF，持有{self.holding_days}个交易日"
                 }
+            }
 
         # 无信号，保持当前持仓
         return {

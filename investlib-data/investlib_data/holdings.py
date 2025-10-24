@@ -26,9 +26,22 @@ class HoldingsCalculator:
             if record.purchase_date < holdings_to_process[record.symbol]["initial_purchase_date"]:
                 holdings_to_process[record.symbol]["initial_purchase_date"] = record.purchase_date
 
+        # Get all current holdings to identify sold positions
+        all_current_holdings = session.query(CurrentHolding).all()
+        current_symbols = {h.symbol for h in all_current_holdings}
+        unsold_symbols = set(holdings_to_process.keys())
+
+        # Delete holdings that have been completely sold (no longer in unsold_records)
+        sold_symbols = current_symbols - unsold_symbols
+        for symbol in sold_symbols:
+            holding_to_delete = session.query(CurrentHolding).filter_by(symbol=symbol).first()
+            if holding_to_delete:
+                session.delete(holding_to_delete)
+
+        # Update or create holdings for unsold positions
         for symbol, data in holdings_to_process.items():
             avg_purchase_price = data["total_amount"] / data["total_quantity"]
-            
+
             holding = session.query(CurrentHolding).filter_by(symbol=symbol).first()
 
             if holding:
@@ -48,5 +61,5 @@ class HoldingsCalculator:
                     profit_loss_pct=0
                 )
                 session.add(holding)
-        
+
         session.commit()

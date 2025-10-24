@@ -261,6 +261,67 @@ if run_backtest:
                 delta_color="inverse"
             )
 
+        # Debug: Show raw trade log if stats are all zero or if there are trades but no stats
+        raw_trade_count = len(results.get('trade_log', []))
+        if raw_trade_count > 0 and (total_trades == 0 or (win_rate_pct == 0 and profit_factor == 0)):
+            with st.expander("🔍 调试：查看原始交易记录", expanded=False):
+                st.warning("""
+                ⚠️ 检测到交易记录存在，但统计数据为0
+
+                这通常表示：
+                1. 所有交易都是BUY，没有对应的SELL（未平仓）
+                2. 交易记录格式不正确
+                3. BUY和SELL无法正确配对
+
+                请查看下方原始交易记录进行诊断：
+                """)
+
+                trade_log = results.get('trade_log', [])
+                if trade_log:
+                    st.write(f"**总交易记录数**: {len(trade_log)}")
+
+                    # 统计BUY和SELL
+                    buy_count = sum(1 for t in trade_log if t.get('action') == 'BUY')
+                    sell_count = sum(1 for t in trade_log if t.get('action') == 'SELL')
+
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.metric("BUY 数量", buy_count)
+                    with col_b:
+                        st.metric("SELL 数量", sell_count)
+
+                    if buy_count > 0 and sell_count == 0:
+                        st.error("""
+                        🔴 **问题诊断**: 只有买入(BUY)，没有卖出(SELL)
+
+                        这说明策略只开仓不平仓，导致无法计算盈亏。
+
+                        **可能原因**:
+                        - 策略逻辑问题：只生成买入信号，缺少卖出信号
+                        - 回测期间未达到卖出条件
+                        - 策略持有至回测结束
+
+                        **建议**:
+                        - 延长回测时间
+                        - 检查策略的卖出逻辑
+                        - 查看策略参数设置
+                        """)
+
+                    # 显示交易记录表格
+                    st.subheader("原始交易记录")
+                    trade_df = pd.DataFrame(trade_log)
+                    display_cols = ['timestamp', 'action', 'symbol', 'price', 'quantity', 'total_cost']
+                    available_cols = [col for col in display_cols if col in trade_df.columns]
+
+                    if available_cols:
+                        st.dataframe(
+                            trade_df[available_cols].head(20),
+                            use_container_width=True
+                        )
+
+                        if len(trade_df) > 20:
+                            st.info(f"显示前20条，共{len(trade_df)}条记录")
+
         # === Section 3: Equity Curve ===
         st.header("📉 权益曲线")
 

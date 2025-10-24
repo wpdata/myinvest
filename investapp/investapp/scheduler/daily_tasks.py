@@ -155,17 +155,46 @@ class DailyScheduler:
         """Get watchlist symbols from database.
 
         Returns:
-            List of stock symbols
+            List of stock symbols (only active symbols)
         """
-        # For V0.2, use a hardcoded watchlist
-        # In future versions, this would come from a user watchlist table
-        return [
-            "600519.SH",  # Moutai
-            "000001.SZ",  # Ping An Bank
-            "600036.SH",  # China Merchants Bank
-            "000858.SZ",  # Wuliangye
-            "601318.SH"   # Ping An Insurance
-        ]
+        try:
+            # Import WatchlistDB
+            import sys
+            import os
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            sys.path.insert(0, project_root)
+
+            from investlib_data.watchlist_db import WatchlistDB
+
+            # Get active symbols from watchlist table
+            watchlist_db = WatchlistDB(self.db_path)
+            symbols_data = watchlist_db.get_all_symbols(status='active')
+
+            # Extract symbol strings
+            symbols = [item['symbol'] for item in symbols_data]
+
+            self.logger.info(f"Loaded {len(symbols)} active symbols from watchlist table")
+
+            # Fallback if no symbols in database
+            if not symbols:
+                self.logger.warning("Watchlist table is empty, using fallback symbols")
+                symbols = [
+                    "600519.SH",  # Moutai
+                    "000001.SZ",  # Ping An Bank
+                    "600036.SH",  # China Merchants Bank
+                ]
+
+            return symbols
+
+        except Exception as e:
+            self.logger.error(f"Failed to load watchlist from database: {e}")
+            self.logger.warning("Using fallback hardcoded symbols")
+            # Fallback to hardcoded list if database access fails
+            return [
+                "600519.SH",  # Moutai
+                "000001.SZ",  # Ping An Bank
+                "600036.SH",  # China Merchants Bank
+            ]
 
     def _get_approved_strategies(self) -> List[str]:
         """Get list of approved strategy names.

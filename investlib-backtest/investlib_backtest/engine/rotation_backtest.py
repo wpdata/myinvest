@@ -128,13 +128,35 @@ class RotationBacktestRunner:
             self.logger.info(f"回测时间跨度: {len(all_dates)} 个交易日")
 
             # 持仓状态跟踪
-            current_position = None  # 当前持仓品种
-            position_entry_date = None  # 入场日期
+            # 初始持仓设置为防御性资产（国债ETF）
+            current_position = asset_symbols.get('bond')  # 默认持有国债
+            position_entry_date = all_dates[0] if all_dates else None  # 从第一天开始持有
             position_entry_price = None  # 入场价格
 
             # 信号和交易统计
             signals_generated = 0
             switches_executed = 0
+
+            # 初始化组合持仓（从国债开始）
+            if current_position and position_entry_date:
+                initial_bond_price = None
+                for asset_type, df in all_data.items():
+                    if asset_type == 'bond':
+                        day_data = df[df['timestamp'] == position_entry_date]
+                        if not day_data.empty:
+                            initial_bond_price = day_data.iloc[0]['close']
+                            break
+
+                if initial_bond_price:
+                    # 初始买入国债
+                    portfolio.switch_position(
+                        from_symbol=None,
+                        to_symbol=current_position,
+                        price=initial_bond_price,
+                        timestamp=position_entry_date,
+                        reasoning={'trigger': '初始建仓', 'action': '买入国债ETF作为防御性持仓'}
+                    )
+                    position_entry_price = initial_bond_price
 
             # 主回测循环
             for i, current_date in enumerate(all_dates):
@@ -151,7 +173,13 @@ class RotationBacktestRunner:
                     historical_data[asset_type] = df[df['timestamp'] <= current_date]
 
                 # 检查是否有足够的历史数据
-                min_required_days = 120  # 根据策略需求调整
+                # 对于轮动策略，只需要足够计算连续N天跌幅的数据即可
+                # 获取策略需要的最小天数
+                if hasattr(strategy, 'consecutive_days'):
+                    min_required_days = strategy.consecutive_days + 1  # N+1天来计算N天涨跌幅
+                else:
+                    min_required_days = 3  # 默认最少3天
+
                 if any(len(df) < min_required_days for df in historical_data.values()):
                     continue
 
@@ -175,29 +203,46 @@ class RotationBacktestRunner:
 
                     signals_generated += 1
 
+                    # 调试：记录信号详情（仅记录前几个和SWITCH信号）
+                    if signals_generated <= 5 or signal.get('action') == 'SWITCH':
+                        self.logger.info(
+                            f"[{current_date}] 信号 #{signals_generated}: "
+                            f"action={signal.get('action')}, "
+                            f"current_pos={current_position}, "
+                            f"reason={signal.get('reason', signal.get('reasoning', {}).get('trigger', 'N/A'))}"
+                        )
+
                     # 处理交易信号
                     if signal and signal.get('action') == 'SWITCH':
                         from_symbol = signal.get('from_symbol')
                         to_symbol = signal.get('target_symbol')
                         reasoning = signal.get('reasoning', {})
 
-                        # 确定价格（使用目标资产的当前价格）
+                        # 确定目标品种的买入价格
                         if to_symbol == asset_symbols.get('etf'):
-                            price = current_prices.get('etf', 0)
+                            to_price = current_prices.get('etf', 0)
                             asset_key = 'etf'
                         elif to_symbol == asset_symbols.get('bond'):
-                            price = current_prices.get('bond', 0)
+                            to_price = current_prices.get('bond', 0)
                             asset_key = 'bond'
                         else:
                             self.logger.warning(f"未知的目标品种: {to_symbol}")
                             continue
 
-                        if price > 0:
+                        # 确定原品种的卖出价格
+                        from_price = None
+                        if from_symbol == asset_symbols.get('etf'):
+                            from_price = current_prices.get('etf', 0)
+                        elif from_symbol == asset_symbols.get('bond'):
+                            from_price = current_prices.get('bond', 0)
+
+                        if to_price > 0:
                             # 执行切换
                             success = portfolio.switch_position(
                                 from_symbol=from_symbol or current_position,
                                 to_symbol=to_symbol,
-                                price=price,
+                                price=to_price,
+                                from_price=from_price,
                                 timestamp=current_date,
                                 reasoning=reasoning
                             )
@@ -206,11 +251,11 @@ class RotationBacktestRunner:
                                 switches_executed += 1
                                 current_position = to_symbol
                                 position_entry_date = current_date
-                                position_entry_price = price
+                                position_entry_price = to_price
 
                                 self.logger.debug(
                                     f"[{current_date}] 切换: {from_symbol or 'None'} → "
-                                    f"{to_symbol} @ {price:.2f} | "
+                                    f"{to_symbol} @ {to_price:.2f} | "
                                     f"原因: {reasoning.get('trigger', 'N/A')}"
                                 )
 
@@ -302,23 +347,27 @@ class RotationPortfolio:
         to_symbol: str,
         price: float,
         timestamp: str,
-        reasoning: Dict = None
+        reasoning: Dict = None,
+        from_price: Optional[float] = None
     ) -> bool:
         """在品种之间切换。
 
         Args:
             from_symbol: 原持仓品种（None表示空仓）
             to_symbol: 目标品种
-            price: 切换价格
+            price: 目标品种的买入价格
             timestamp: 时间戳
             reasoning: 切换原因
+            from_price: 原持仓品种的卖出价格（如果不提供则使用price）
 
         Returns:
             是否成功
         """
         # 如果有现有持仓，先卖出
         if self.current_position and self.current_shares > 0:
-            sell_value = self.current_shares * price
+            # 使用原品种的价格卖出
+            sell_price = from_price if from_price is not None else price
+            sell_value = self.current_shares * sell_price
             commission = sell_value * self.commission_rate
             slippage = sell_value * self.slippage_rate
             self.cash += sell_value - commission - slippage

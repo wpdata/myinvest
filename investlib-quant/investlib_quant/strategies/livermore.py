@@ -93,11 +93,30 @@ class LivermoreStrategy(BaseStrategy):
         volume_ratio = float(latest['volume'] / latest['volume_ma_20'])
 
         # 判断信号
-        # 条件1：价格突破 120 日均线（前一日低于，今日高于）
+        # 卖出条件：价格跌破 120 日均线（前一日高于，今日低于）
+        ma_breakdown = (prev['close'] > prev['ma_120']) and (current_price < ma_120)
+
+        # 买入条件1：价格突破 120 日均线（前一日低于，今日高于）
         ma_breakout = (prev['close'] < prev['ma_120']) and (current_price > ma_120)
 
-        # 条件2：成交量放大
+        # 买入条件2：成交量放大
         volume_surge = volume_ratio > self.volume_threshold
+
+        # 生成卖出信号
+        if ma_breakdown:
+            return {
+                "action": "SELL",
+                "exit_price": round(current_price, 2),
+                "confidence": "HIGH",
+                "reasoning": {
+                    "strategy": "Livermore Trend Following",
+                    "ma_breakdown": True,
+                    "current_price": round(current_price, 2),
+                    "ma_120": round(ma_120, 2),
+                    "breakdown_percentage": round((ma_120 - current_price) / ma_120 * 100, 2),
+                    "reason": "价格跌破120日均线，趋势转弱"
+                }
+            }
 
         # 生成买入信号
         if ma_breakout and volume_surge:
