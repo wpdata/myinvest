@@ -49,15 +49,98 @@ tab_manage, tab_import, tab_groups = st.tabs([
 # ===== TAB 1: MANAGE WATCHLIST =====
 with tab_manage:
     # Add symbol form
-    st.subheader("➕ 添加股票到监视列表")
+    st.subheader("➕ 添加品种到监视列表")
+
+    # 添加市场代码帮助信息
+    with st.expander("📖 品种代码格式说明", expanded=False):
+        st.markdown("""
+### 股票市场后缀
+
+| 市场 | 后缀 | 示例 | 说明 |
+|------|------|------|------|
+| 上海A股 | `.SH` | 600519.SH | 贵州茅台 |
+| 深圳A股 | `.SZ` | 000001.SZ | 平安银行 |
+| 科创板 | `.SH` | 688981.SH | 中芯国际 |
+| 创业板 | `.SZ` | 300750.SZ | 宁德时代 |
+
+### 期货市场后缀
+
+| 交易所 | 后缀 | 品种示例 | 说明 |
+|--------|------|----------|------|
+| 中金所 | `.CFFEX` | IF2506.CFFEX | 沪深300股指期货 |
+| | | IC2506.CFFEX | 中证500股指期货 |
+| | | IH2506.CFFEX | 上证50股指期货 |
+| | | IM2506.CFFEX | 中证1000股指期货 |
+| | | T2506.CFFEX | 10年期国债期货 |
+| 上期所 | `.SHFE` | CU2505.SHFE | 沪铜 |
+| | | AU2506.SHFE | 沪金 |
+| | | AG2506.SHFE | 沪银 |
+| | | RB2505.SHFE | 螺纹钢 |
+| | | FU2505.SHFE | 燃料油 |
+| 大商所 | `.DCE` | M2505.DCE | 豆粕 |
+| | | C2505.DCE | 玉米 |
+| | | I2505.DCE | 铁矿石 |
+| | | P2505.DCE | 棕榈油 |
+| 郑商所 | `.CZCE` | TA2505.CZCE | PTA（精对苯二甲酸） |
+| | | MA2505.CZCE | 甲醇 |
+| | | SR2505.CZCE | 白糖 |
+| | | CF2505.CZCE | 棉花 |
+| | | ZC2505.CZCE | 动力煤 |
+| 上海能源 | `.INE` | SC2505.INE | 原油 |
+| | | LU2505.INE | 低硫燃料油 |
+
+### ETF基金后缀
+
+| 市场 | 后缀 | 示例 | 说明 |
+|------|------|------|------|
+| 上海ETF | `.SH` | 510050.SH | 50ETF |
+| | | 510300.SH | 沪深300ETF |
+| | | 511010.SH | 国债ETF |
+| 深圳ETF | `.SZ` | 159915.SZ | 创业板ETF |
+| | | 159845.SZ | 中证1000ETF |
+
+### 期权代码格式
+
+期权代码较复杂，格式：`标的代码-到期月-C/P-行权价`
+- 示例：`510050C2506M03000` (50ETF购6月3.0)
+        """)
+
+        st.markdown("""
+### 常用期货品种速查
+
+**金融期货**：
+- IF (沪深300)、IC (中证500)、IH (上证50)、IM (中证1000) → `.CFFEX`
+- T (10年国债)、TF (5年国债)、TS (2年国债) → `.CFFEX`
+
+**金属期货**：
+- CU (铜)、AL (铝)、ZN (锌)、PB (铅)、NI (镍) → `.SHFE`
+- AU (黄金)、AG (白银) → `.SHFE`
+
+**能源化工**：
+- SC (原油)、LU (燃料油) → `.INE`
+- FU (燃料油)、BU (沥青) → `.SHFE`
+- TA (PTA)、MA (甲醇)、EG (乙二醇) → `.CZCE`
+- L (塑料)、V (PVC)、PP (聚丙烯) → `.DCE`
+
+**农产品**：
+- M (豆粕)、Y (豆油)、A (豆一) → `.DCE`
+- C (玉米)、CS (玉米淀粉) → `.DCE`
+- SR (白糖)、CF (棉花)、RM (菜粕) → `.CZCE`
+- P (棕榈油)、OI (菜籽油) → `.DCE`
+
+**黑色系**：
+- RB (螺纹钢)、HC (热轧卷板)、SS (不锈钢) → `.SHFE`
+- I (铁矿石)、J (焦炭)、JM (焦煤) → `.DCE`
+- ZC (动力煤)、SF (硅铁)、SM (硅锰) → `.CZCE`
+        """)
 
     col1, col2, col3, col4 = st.columns([3, 2, 2, 1])
 
     with col1:
         symbol_input = st.text_input(
             _("watchlist.symbol_input"),
-            placeholder="例如: 600519.SH, IF2506.CFFEX",
-            help="支持股票、期货、期权代码"
+            placeholder="例如: 600519.SH, TA2505.CZCE, 510050.SH",
+            help="💡 不确定代码？点击上方「品种代码格式说明」查看完整列表"
         )
 
     with col2:
